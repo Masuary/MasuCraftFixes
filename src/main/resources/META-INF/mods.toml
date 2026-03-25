@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[40,)"
+license="All rights reserved"
+
+[[mods]]
+modId="masucraftfixes"
+version="1.0.0"
+displayName="MasuCraft Fixes"
+authors="Masuary"
+description='''
+Server-side fixes for Vault Hunters: Pickarang item tag filtering, LuckPerms player limit bypass, and flight prevention in vaults.
+'''
+
+[[dependencies.masucraftfixes]]
+    modId="forge"
+    mandatory=true
+    versionRange="[40,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.masucraftfixes]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.18.2,1.19)"
+    ordering="NONE"
+    side="BOTH"
