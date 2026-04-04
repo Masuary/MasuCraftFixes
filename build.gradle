@@ -83,7 +83,7 @@ dependencies {
     implementation fg.deobf("curse.maven:autoreglib-250363:3642382")
     implementation fg.deobf("curse.maven:quark-243121:3840125")
     implementation fg.deobf(files("deps/luckperms-forge.jar"))
-    implementation fg.deobf(files("deps/the_vault-1.18.2-3.20.3.6055.jar"))
+    implementation fg.deobf(files("deps/the_vault-1.18.2-3.21.2.6474.jar"))
     implementation 'net.luckperms:api:5.4'
     implementation fg.deobf("curse.maven:ftbessentials-410811:4462414")
 
