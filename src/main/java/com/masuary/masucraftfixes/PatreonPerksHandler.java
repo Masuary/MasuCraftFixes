@@ -72,13 +72,11 @@ public class PatreonPerksHandler {
     }
 
     public static void updatePlayerPatronStatus(ServerPlayer player) {
-        UUID uuid = player.getUUID();
-
         PatreonTier effectiveTier = getEffectiveLpTier(player);
 
         if (effectiveTier != null) {
             grantPatronPerks(player, effectiveTier);
-        } else if (lpGrantedTiers.containsKey(uuid)) {
+        } else {
             revokePatronPerks(player);
         }
     }
@@ -132,7 +130,7 @@ public class PatreonPerksHandler {
                     }
                 }
 
-                discoverTierModels(server, uuid, newTiers);
+                discoverTierModels(player, newTiers);
             }
 
         }
@@ -141,6 +139,12 @@ public class PatreonPerksHandler {
     @SuppressWarnings("unchecked")
     private static void revokePatronPerks(ServerPlayer player) {
         UUID uuid = player.getUUID();
+        var server = player.getServer();
+
+        boolean hasInMemoryGrant = lpGrantedTiers.containsKey(uuid);
+        boolean hasPersistedGrant = server != null && !LpGrantedModelsData.get(server).getModels(uuid).isEmpty();
+
+        if (!hasInMemoryGrant && !hasPersistedGrant) return;
 
         Map<UUID, List<PatreonTier>> cache = getTierCache();
         if (cache == null) return;
@@ -153,7 +157,6 @@ public class PatreonPerksHandler {
 
             MasuCraftFixes.LOGGER.info("Revoked patron perks from {} (LuckPerms permission removed)", player.getName().getString());
 
-            var server = player.getServer();
             if (server != null) {
                 PlayerPatreonDisplayData displayData = PlayerPatreonDisplayData.get(server);
                 displayData.setDisplaySettings(uuid, new PlayerPatreonDisplayData.PatreonDisplay(null, false, false));
@@ -177,29 +180,48 @@ public class PatreonPerksHandler {
         }
     }
 
-    private static void discoverTierModels(net.minecraft.server.MinecraftServer server, UUID uuid, List<PatreonTier> tiers) {
+    private static void discoverTierModels(ServerPlayer player, List<PatreonTier> tiers) {
+        var server = player.getServer();
+        if (server == null) return;
+
+        UUID uuid = player.getUUID();
         DiscoveredModelsData modelsData = DiscoveredModelsData.get(server);
-        Set<ResourceLocation> granted = new HashSet<>();
+        Set<ResourceLocation> allTierModels = new HashSet<>();
+        Set<ResourceLocation> newlyDiscovered = new HashSet<>();
 
         for (PatreonTier tier : tiers) {
-            for (ResourceLocation modelId : tier.getModelRewards()) {
+            List<ResourceLocation> rewards = tier.getModelRewards();
+            for (ResourceLocation modelId : rewards) {
+                allTierModels.add(modelId);
                 if (modelsData.discoverModel(uuid, modelId)) {
-                    granted.add(modelId);
+                    newlyDiscovered.add(modelId);
                 }
             }
         }
 
-        if (!granted.isEmpty()) {
-            Set<ResourceLocation> existing = lpGrantedModels.computeIfAbsent(uuid, k -> new HashSet<>());
-            existing.addAll(granted);
-            MasuCraftFixes.LOGGER.info("Discovered {} patron models for {}", granted.size(), uuid);
+        if (!allTierModels.isEmpty()) {
+            Set<ResourceLocation> tracked = lpGrantedModels.computeIfAbsent(uuid, k -> new HashSet<>());
+            tracked.addAll(allTierModels);
+            LpGrantedModelsData.get(server).setModels(uuid, tracked);
         }
+
+        if (!newlyDiscovered.isEmpty()) {
+            MasuCraftFixes.LOGGER.info("Discovered {} patron models for {}", newlyDiscovered.size(), player.getName().getString());
+        }
+        modelsData.syncTo(player);
     }
 
     @SuppressWarnings("unchecked")
     private static void revokeTierModels(net.minecraft.server.MinecraftServer server, UUID uuid) {
         Set<ResourceLocation> granted = lpGrantedModels.remove(uuid);
-        if (granted == null || granted.isEmpty()) return;
+
+        LpGrantedModelsData persistedData = LpGrantedModelsData.get(server);
+        if (granted == null || granted.isEmpty()) {
+            granted = persistedData.getModels(uuid);
+        }
+        persistedData.clearModels(uuid);
+
+        if (granted.isEmpty()) return;
 
         try {
             DiscoveredModelsData modelsData = DiscoveredModelsData.get(server);
