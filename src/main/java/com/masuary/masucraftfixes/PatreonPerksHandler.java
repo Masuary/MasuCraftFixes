@@ -2,9 +2,11 @@ package com.masuary.masucraftfixes;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import iskallia.vault.world.data.DiscoveredModelsData;
 import iskallia.vault.world.data.PlayerPatreonDisplayData;
 import iskallia.vault.www.patreon.PatreonManager;
 import iskallia.vault.www.patreon.PatreonTier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.commands.CommandSourceStack;
@@ -20,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PatreonPerksHandler {
 
     private static final Map<UUID, PatreonTier> lpGrantedTiers = new ConcurrentHashMap<>();
+    private static final Map<UUID, Set<ResourceLocation>> lpGrantedModels = new ConcurrentHashMap<>();
     private static final Map<UUID, Integer> pendingUpdates = new ConcurrentHashMap<>();
     private static final int UPDATE_DELAY_TICKS = 40;
 
@@ -128,6 +131,8 @@ public class PatreonPerksHandler {
                         displayData.setDisplaySettings(uuid, existing);
                     }
                 }
+
+                discoverTierModels(server, uuid, newTiers);
             }
 
         }
@@ -152,12 +157,15 @@ public class PatreonPerksHandler {
             if (server != null) {
                 PlayerPatreonDisplayData displayData = PlayerPatreonDisplayData.get(server);
                 displayData.setDisplaySettings(uuid, new PlayerPatreonDisplayData.PatreonDisplay(null, false, false));
+
+                revokeTierModels(server, uuid);
             }
         }
     }
 
     public static void onPlayerLeave(UUID uuid) {
         pendingUpdates.remove(uuid);
+        lpGrantedModels.remove(uuid);
 
         if (lpGrantedTiers.remove(uuid) != null) {
             Map<UUID, List<PatreonTier>> cache = getTierCache();
@@ -166,6 +174,50 @@ public class PatreonPerksHandler {
                     cache.remove(uuid);
                 }
             }
+        }
+    }
+
+    private static void discoverTierModels(net.minecraft.server.MinecraftServer server, UUID uuid, List<PatreonTier> tiers) {
+        DiscoveredModelsData modelsData = DiscoveredModelsData.get(server);
+        Set<ResourceLocation> granted = new HashSet<>();
+
+        for (PatreonTier tier : tiers) {
+            for (ResourceLocation modelId : tier.getModelRewards()) {
+                if (modelsData.discoverModel(uuid, modelId)) {
+                    granted.add(modelId);
+                }
+            }
+        }
+
+        if (!granted.isEmpty()) {
+            Set<ResourceLocation> existing = lpGrantedModels.computeIfAbsent(uuid, k -> new HashSet<>());
+            existing.addAll(granted);
+            MasuCraftFixes.LOGGER.info("Discovered {} patron models for {}", granted.size(), uuid);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void revokeTierModels(net.minecraft.server.MinecraftServer server, UUID uuid) {
+        Set<ResourceLocation> granted = lpGrantedModels.remove(uuid);
+        if (granted == null || granted.isEmpty()) return;
+
+        try {
+            DiscoveredModelsData modelsData = DiscoveredModelsData.get(server);
+            Field modelsField = DiscoveredModelsData.class.getDeclaredField("discoveredModels");
+            modelsField.setAccessible(true);
+            Map<UUID, Map<ResourceLocation, Integer>> discoveredModels =
+                    (Map<UUID, Map<ResourceLocation, Integer>>) modelsField.get(modelsData);
+
+            Map<ResourceLocation, Integer> playerModels = discoveredModels.get(uuid);
+            if (playerModels != null) {
+                for (ResourceLocation modelId : granted) {
+                    playerModels.remove(modelId);
+                }
+                modelsData.setDirty();
+                MasuCraftFixes.LOGGER.info("Revoked {} patron models from {}", granted.size(), uuid);
+            }
+        } catch (Exception e) {
+            MasuCraftFixes.LOGGER.error("Failed to revoke patron models", e);
         }
     }
 
