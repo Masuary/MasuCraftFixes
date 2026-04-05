@@ -7,7 +7,9 @@
     "AngelExpertiseMixin",
     "CommandBlockEditMixin",
     "FTBCheatCommandsMixin",
+    "IskalliaDevsMixin",
     "PickarangMixin",
+    "RewardMixin",
     "ServerPlayerMixin"
   ],
   "injectors": {
