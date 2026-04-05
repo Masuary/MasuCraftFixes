@@ -33,4 +33,30 @@ public class LuckPermsInt {
 
         return permissionData.checkPermission("masucraftfixes.commandblock.edit").asBoolean();
     }
+
+    public static boolean hasPermission(ServerPlayer player, String permission) {
+        try {
+            LuckPermsProvider.get();
+        } catch (IllegalStateException e) {
+            return false;
+        }
+
+        PlayerAdapter<ServerPlayer> adapter = LuckPermsProvider.get().getPlayerAdapter(ServerPlayer.class);
+        CachedPermissionData permissionData = adapter.getPermissionData(player);
+
+        return permissionData.checkPermission(permission).asBoolean();
+    }
+
+    public static void subscribeToPermissionChanges(java.util.function.Consumer<java.util.UUID> handler) {
+        try {
+            net.luckperms.api.LuckPerms luckPerms = LuckPermsProvider.get();
+            luckPerms.getEventBus().subscribe(
+                    net.luckperms.api.event.user.UserDataRecalculateEvent.class,
+                    event -> handler.accept(event.getUser().getUniqueId())
+            );
+            MasuCraftFixes.LOGGER.info("Subscribed to LuckPerms permission change events for patron perks");
+        } catch (Exception e) {
+            MasuCraftFixes.LOGGER.warn("Failed to subscribe to LuckPerms events: {}", e.getMessage());
+        }
+    }
 }
