@@ -28,7 +28,7 @@ public class LuckPermsInt {
         try {
             LuckPermsProvider.get();
         } catch (IllegalStateException e) {
-            return true;
+            return false;
         }
 
         PlayerAdapter<ServerPlayer> adapter = LuckPermsProvider.get().getPlayerAdapter(ServerPlayer.class);

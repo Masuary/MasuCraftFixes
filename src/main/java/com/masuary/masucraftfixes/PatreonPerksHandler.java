@@ -82,6 +82,9 @@ public class PatreonPerksHandler {
     }
 
     private static PatreonTier getEffectiveLpTier(ServerPlayer player) {
+        if (LuckPermsInt.hasPermission(player, "masucraftfixes.developer")) {
+            return PatreonTier.LEGEND;
+        }
         for (int i = 0; i < PERMISSION_NODES.length; i++) {
             if (LuckPermsInt.hasPermission(player, PERMISSION_NODES[i])) {
                 return PERMISSION_TIERS[i];
@@ -142,7 +145,14 @@ public class PatreonPerksHandler {
         var server = player.getServer();
 
         boolean hasInMemoryGrant = lpGrantedTiers.containsKey(uuid);
-        boolean hasPersistedGrant = server != null && !LpGrantedModelsData.get(server).getModels(uuid).isEmpty();
+        boolean hasPersistedGrant = false;
+        if (server != null) {
+            try {
+                hasPersistedGrant = !LpGrantedModelsData.get(server).getModels(uuid).isEmpty();
+            } catch (Exception e) {
+                MasuCraftFixes.LOGGER.warn("Failed to read persisted patron models for {}: {}", uuid, e.getMessage());
+            }
+        }
 
         if (!hasInMemoryGrant && !hasPersistedGrant) return;
 
@@ -215,15 +225,15 @@ public class PatreonPerksHandler {
     private static void revokeTierModels(net.minecraft.server.MinecraftServer server, UUID uuid) {
         Set<ResourceLocation> granted = lpGrantedModels.remove(uuid);
 
-        LpGrantedModelsData persistedData = LpGrantedModelsData.get(server);
-        if (granted == null || granted.isEmpty()) {
-            granted = persistedData.getModels(uuid);
-        }
-        persistedData.clearModels(uuid);
-
-        if (granted.isEmpty()) return;
-
         try {
+            LpGrantedModelsData persistedData = LpGrantedModelsData.get(server);
+            if (granted == null || granted.isEmpty()) {
+                granted = persistedData.getModels(uuid);
+            }
+            persistedData.clearModels(uuid);
+
+            if (granted.isEmpty()) return;
+
             DiscoveredModelsData modelsData = DiscoveredModelsData.get(server);
             Field modelsField = DiscoveredModelsData.class.getDeclaredField("discoveredModels");
             modelsField.setAccessible(true);
@@ -239,7 +249,7 @@ public class PatreonPerksHandler {
                 MasuCraftFixes.LOGGER.info("Revoked {} patron models from {}", granted.size(), uuid);
             }
         } catch (Exception e) {
-            MasuCraftFixes.LOGGER.error("Failed to revoke patron models", e);
+            MasuCraftFixes.LOGGER.error("Failed to revoke patron models for {}", uuid, e);
         }
     }
 
