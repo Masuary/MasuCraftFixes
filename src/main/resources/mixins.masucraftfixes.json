@@ -8,6 +8,7 @@
     "CommandBlockEditMixin",
     "FTBCheatCommandsMixin",
     "IskalliaDevsMixin",
+    "ModifyCrystalSuggestionsMixin",
     "PickarangMixin",
     "RewardMixin",
     "ServerPlayerMixin"
