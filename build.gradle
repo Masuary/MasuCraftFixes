@@ -19,7 +19,7 @@ apply plugin: 'org.spongepowered.mixin'
 
 version = '1.5.0'
 group = 'com.masuary.masucraftfixes'
-archivesBaseName = 'masucraftfixes'
+archivesBaseName = 'masucraftfixes-wolds'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 

@@ -11,7 +11,7 @@ Requires Java 17 (system default is Java 21, so use `JAVA_HOME="C:/Program Files
 JAVA_HOME="C:/Program Files/Java/jdk-17" ./gradlew build
 ```
 
-Output JAR: `build/libs/masucraftfixes-<version>.jar`.
+Output JAR: `build/libs/masucraftfixes-wolds-<version>.jar`.
 
 ## Package Structure
 
