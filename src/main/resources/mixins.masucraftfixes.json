@@ -5,13 +5,8 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "AngelExpertiseMixin",
-    "CommandBlockEditMixin",
-    "CompressMessageMixin",
     "FTBCheatCommandsMixin",
-    "IskalliaDevsMixin",
-    "ModifyCrystalSuggestionsMixin",
     "PickarangMixin",
-    "RewardMixin",
     "ServerPlayerMixin"
   ],
   "injectors": {
