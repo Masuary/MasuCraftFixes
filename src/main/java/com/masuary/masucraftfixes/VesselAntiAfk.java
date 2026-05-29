@@ -15,6 +15,7 @@ import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -113,7 +114,17 @@ public class VesselAntiAfk {
         UUID vesselId = entity.getUUID();
         long now = entity.level.getGameTime();
         if (newTarget == null) {
-            debug("Vessel {} target cleared (was tracked={})", shortId(vesselId), lastTargetSeenTick.containsKey(vesselId));
+            // The event fires before setTarget is applied, so entity.getTarget() still
+            // returns the PREVIOUS target. Only log a real null transition (was != null,
+            // now == null) - the vessel's AI re-fires this event every tick with null
+            // when no valid target is found, which otherwise spams the log.
+            LivingEntity previousTarget = entity instanceof Mob mob ? mob.getTarget() : null;
+            if (previousTarget != null) {
+                debug("Vessel {} target cleared (was {}, last tracked UUID={})",
+                        shortId(vesselId),
+                        previousTarget.getName().getString(),
+                        lastTargetUuid.get(vesselId));
+            }
             return;
         }
         lastEngagementTick.put(vesselId, now);
@@ -166,12 +177,31 @@ public class VesselAntiAfk {
 
         if (target == null || !target.isAlive() || target.level != vessel.level) {
             Long lastSeen = lastTargetSeenTick.get(vesselId);
+            // Seed presumptive tracking if we have none yet. This matters after a server
+            // restart where the JVM maps are empty but the Vessel was already in a fight,
+            // or any case where the Vessel exists in a dim with a player but never
+            // acquired aggro (player AFK out of range). Single-player dim only - if
+            // multiple players are in the dim we can't safely pick one to pull.
+            if (lastSeen == null && vessel.level instanceof ServerLevel serverLevel) {
+                List<ServerPlayer> playersInDim = serverLevel.players();
+                if (playersInDim.size() == 1) {
+                    ServerPlayer presumptive = playersInDim.get(0);
+                    lastTargetSeenTick.put(vesselId, now);
+                    lastTargetUuid.put(vesselId, presumptive.getUUID());
+                    debug("Vessel {} seeded presumptive target {} (no prior tracking, single player in dim)",
+                            shortId(vesselId), presumptive.getName().getString());
+                    lastSeen = now;
+                } else if (DEBUG && !playersInDim.isEmpty() && (now % DEBUG_SNAPSHOT_INTERVAL_TICKS == 0)) {
+                    debug("Vessel {} no tracking and {} players in dim - cannot seed presumptive target",
+                            shortId(vesselId), playersInDim.size());
+                }
+            }
             if (lastSeen != null) {
                 long elapsed = now - lastSeen;
                 if (elapsed > LOST_TARGET_TIMEOUT_TICKS) {
                     pullLostTarget(vessel, vesselId, lastSeen, now);
                 } else if (DEBUG && elapsed > 0 && elapsed % DEBUG_SNAPSHOT_INTERVAL_TICKS == 0) {
-                    debug("Vessel {} no target ({}s elapsed, despawn at {}s)",
+                    debug("Vessel {} no target ({}s elapsed, pull at {}s)",
                             shortId(vesselId), elapsed / 20, LOST_TARGET_TIMEOUT_TICKS / 20);
                 }
             }
@@ -245,24 +275,26 @@ public class VesselAntiAfk {
         }
         if (isVessel(entity)) {
             UUID vesselId = entity.getUUID();
-            lastEngagementTick.remove(vesselId);
-            lastTargetSeenTick.remove(vesselId);
-            lastTargetUuid.remove(vesselId);
-            lastTargetPosition.remove(vesselId);
-            lastVesselPosition.remove(vesselId);
-            lastDebugSnapshotTick.remove(vesselId);
-            // Only drop the spawn anchor if the vessel is *permanently* gone (killed or
-            // explicitly discarded). Chunk-unload / player-unload / dimension-change all
-            // fire EntityLeaveWorldEvent but the vessel will re-join the same world from
-            // NBT later - we must preserve the original arena anchor across those.
+            // Reason-aware cleanup: chunk-unload / player-unload / dimension-change all fire
+            // EntityLeaveWorldEvent but the vessel will re-join the same world from NBT later.
+            // Wiping target/timer state on those removals would mean a player can log out near
+            // an active vessel, log back in far enough to drop aggro, and exploit the gap
+            // because lastTargetSeenTick is gone -> lost-target pull never fires.
             net.minecraft.world.entity.Entity.RemovalReason removal = entity.getRemovalReason();
-            if (removal == net.minecraft.world.entity.Entity.RemovalReason.KILLED
-                    || removal == net.minecraft.world.entity.Entity.RemovalReason.DISCARDED) {
+            boolean permanent = removal == net.minecraft.world.entity.Entity.RemovalReason.KILLED
+                    || removal == net.minecraft.world.entity.Entity.RemovalReason.DISCARDED;
+            if (permanent) {
+                lastEngagementTick.remove(vesselId);
+                lastTargetSeenTick.remove(vesselId);
+                lastTargetUuid.remove(vesselId);
+                lastTargetPosition.remove(vesselId);
+                lastVesselPosition.remove(vesselId);
+                lastDebugSnapshotTick.remove(vesselId);
                 vesselSpawnPosition.remove(vesselId);
-                debug("Vessel {} left world (cleanup, reason={}, spawn anchor dropped)",
+                debug("Vessel {} left world permanently (reason={}, all state dropped)",
                         shortId(vesselId), removal);
             } else {
-                debug("Vessel {} left world (cleanup, reason={}, spawn anchor kept)",
+                debug("Vessel {} left world (reason={}, all state kept for rejoin)",
                         shortId(vesselId), removal);
             }
         }
