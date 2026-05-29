@@ -17,6 +17,7 @@ public class MasuCraftFixes {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         MinecraftForge.EVENT_BUS.register(new VesselAntiAfk());
+        MinecraftForge.EVENT_BUS.register(VesselAntiAfkCommand.class);
         LOGGER.info("MasuCraftFixes initialized");
     }
 

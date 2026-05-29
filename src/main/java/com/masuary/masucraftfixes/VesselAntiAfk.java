@@ -1,8 +1,10 @@
 package com.masuary.masucraftfixes;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
@@ -21,11 +23,24 @@ import java.util.UUID;
 
 public class VesselAntiAfk {
 
-    private static final boolean DEBUG = true;
+    private static volatile boolean debugEnabled = false;
+
+    public static void setDebug(boolean enabled) {
+        debugEnabled = enabled;
+    }
+
+    public static boolean isDebug() {
+        return debugEnabled;
+    }
 
     private static final String VESSEL_CLASS_NAME = "iskallia.vault.entity.boss.TheVesselEntity";
-    private static final long TIMEOUT_TICKS = 300L;
-    private static final long LOST_TARGET_TIMEOUT_TICKS = 1200L;
+    private static final String NBT_KEY_SEEN_TICK = "MasuCraftFixes_VesselSeenTick";
+    private static final String NBT_KEY_TARGET_UUID = "MasuCraftFixes_VesselTargetUuid";
+    private static final String NBT_KEY_ANCHOR_X = "MasuCraftFixes_VesselAnchorX";
+    private static final String NBT_KEY_ANCHOR_Y = "MasuCraftFixes_VesselAnchorY";
+    private static final String NBT_KEY_ANCHOR_Z = "MasuCraftFixes_VesselAnchorZ";
+    private static final long TIMEOUT_TICKS = 6000L;
+    private static final long LOST_TARGET_TIMEOUT_TICKS = 2400L;
     private static final long DEBUG_SNAPSHOT_INTERVAL_TICKS = 100L;
     private static final double MOVE_THRESHOLD_SQ = 9.0;
     private static final double MAX_LEGIT_MOVE_SQ = 100.0;
@@ -55,15 +70,21 @@ public class VesselAntiAfk {
             return;
         }
         UUID vesselId = entity.getUUID();
-        // Only capture on the very first join (vessel UUID won't appear in the map yet).
-        // Chunk-unload/reload re-fires this event - in that case keep the original arena
-        // position rather than overwriting with wherever the vessel happens to be now.
+        // Restore persisted state from the entity NBT (auto-loaded by Forge before
+        // EntityJoinWorldEvent fires). This survives full server restarts - the in-memory
+        // maps would otherwise be empty after a JVM restart even though the entity NBT
+        // still has the tracking data.
+        loadFromNbt(entity, vesselId);
+
+        // Only capture on the very first join. In-memory map hit means chunk-reload-only;
+        // if NBT had the anchor we already restored it above and it's now in the map.
         if (vesselSpawnPosition.containsKey(vesselId)) {
-            debug("Vessel {} re-joined world (kept original spawn pos {})",
+            debug("Vessel {} re-joined world (kept anchor {})",
                     shortId(vesselId), fmt(vesselSpawnPosition.get(vesselId)));
             return;
         }
         vesselSpawnPosition.put(vesselId, entity.position());
+        persistToNbt(entity, vesselId);
         debug("Vessel {} joined world at {} (arena rescue anchor)",
                 shortId(vesselId), fmt(entity.position()));
     }
@@ -132,6 +153,7 @@ public class VesselAntiAfk {
         lastTargetUuid.put(vesselId, newTarget.getUUID());
         lastTargetPosition.put(vesselId, newTarget.position());
         lastVesselPosition.put(vesselId, entity.position());
+        persistToNbt(entity, vesselId);
         debug("Vessel {} acquired target {} at {} (vessel at {}, dist={})",
                 shortId(vesselId),
                 newTarget.getName().getString(),
@@ -188,10 +210,11 @@ public class VesselAntiAfk {
                     ServerPlayer presumptive = playersInDim.get(0);
                     lastTargetSeenTick.put(vesselId, now);
                     lastTargetUuid.put(vesselId, presumptive.getUUID());
+                    persistToNbt(vessel, vesselId);
                     debug("Vessel {} seeded presumptive target {} (no prior tracking, single player in dim)",
                             shortId(vesselId), presumptive.getName().getString());
                     lastSeen = now;
-                } else if (DEBUG && !playersInDim.isEmpty() && (now % DEBUG_SNAPSHOT_INTERVAL_TICKS == 0)) {
+                } else if (debugEnabled && !playersInDim.isEmpty() && (now % DEBUG_SNAPSHOT_INTERVAL_TICKS == 0)) {
                     debug("Vessel {} no tracking and {} players in dim - cannot seed presumptive target",
                             shortId(vesselId), playersInDim.size());
                 }
@@ -200,7 +223,7 @@ public class VesselAntiAfk {
                 long elapsed = now - lastSeen;
                 if (elapsed > LOST_TARGET_TIMEOUT_TICKS) {
                     pullLostTarget(vessel, vesselId, lastSeen, now);
-                } else if (DEBUG && elapsed > 0 && elapsed % DEBUG_SNAPSHOT_INTERVAL_TICKS == 0) {
+                } else if (debugEnabled && elapsed > 0 && elapsed % DEBUG_SNAPSHOT_INTERVAL_TICKS == 0) {
                     debug("Vessel {} no target ({}s elapsed, pull at {}s)",
                             shortId(vesselId), elapsed / 20, LOST_TARGET_TIMEOUT_TICKS / 20);
                 }
@@ -209,6 +232,14 @@ public class VesselAntiAfk {
         }
 
         lastTargetSeenTick.put(vesselId, now);
+        // Refresh target UUID in case AI re-targeted to a different player. Persist so a
+        // server restart picks up the live target rather than a stale one.
+        UUID currentTargetUuid = target.getUUID();
+        UUID storedTargetUuid = lastTargetUuid.get(vesselId);
+        if (!currentTargetUuid.equals(storedTargetUuid)) {
+            lastTargetUuid.put(vesselId, currentTargetUuid);
+        }
+        persistToNbt(vessel, vesselId);
 
         Vec3 previousTargetPosition = lastTargetPosition.get(vesselId);
         Vec3 currentTargetPosition = target.position();
@@ -239,7 +270,7 @@ public class VesselAntiAfk {
             lastTargetPosition.put(vesselId, currentTargetPosition);
             lastVesselPosition.put(vesselId, currentVesselPosition);
             lastEngagementTick.put(vesselId, now);
-            if (DEBUG) {
+            if (debugEnabled){
                 StringBuilder reasons = new StringBuilder();
                 if (targetMovedLegit) reasons.append("targetMoved(").append(String.format("%.1f", Math.sqrt(targetMoveSq))).append("b) ");
                 if (vesselMovedLegit) reasons.append("vesselMoved(").append(String.format("%.1f", Math.sqrt(vesselMoveSq))).append("b) ");
@@ -250,7 +281,7 @@ public class VesselAntiAfk {
 
         double distSq = vessel.distanceToSqr(target);
         if (distSq < MIN_TELEPORT_DISTANCE_SQ) {
-            if (DEBUG) maybeLogSnapshot(vesselId, now, vessel, target, distSq, "in-range, gated");
+            if (debugEnabled)maybeLogSnapshot(vesselId, now, vessel, target, distSq, "in-range, gated");
             return;
         }
 
@@ -263,7 +294,7 @@ public class VesselAntiAfk {
             lastEngagementTick.put(vesselId, now);
             lastTargetPosition.put(vesselId, target.position());
             lastVesselPosition.put(vesselId, vessel.position());
-        } else if (DEBUG) {
+        } else if (debugEnabled){
             maybeLogSnapshot(vesselId, now, vessel, target, distSq, "out-of-range, ticking");
         }
     }
@@ -328,6 +359,7 @@ public class VesselAntiAfk {
                 lastTargetPosition.put(vesselId, target.position());
             }
         }
+        persistToNbt(vessel, vesselId);
     }
 
     private void forceEngagement(Mob vessel, LivingEntity target) {
@@ -352,6 +384,7 @@ public class VesselAntiAfk {
         if (targetUuid == null) {
             debug("Vessel {} lost-target timeout but no stored target UUID", shortId(vesselId));
             lastTargetSeenTick.put(vesselId, now);
+            persistToNbt(vessel, vesselId);
             return;
         }
         if (!(vessel.level instanceof ServerLevel serverLevel)) {
@@ -362,12 +395,14 @@ public class VesselAntiAfk {
             debug("Vessel {} lost-target timeout but player {} is offline (retry in {}s)",
                     shortId(vesselId), targetUuid, LOST_TARGET_TIMEOUT_TICKS / 20);
             lastTargetSeenTick.put(vesselId, now);
+            persistToNbt(vessel, vesselId);
             return;
         }
         if (player.level != vessel.level) {
             debug("Vessel {} lost-target timeout but player {} is in another dimension (retry in {}s)",
                     shortId(vesselId), player.getName().getString(), LOST_TARGET_TIMEOUT_TICKS / 20);
             lastTargetSeenTick.put(vesselId, now);
+            persistToNbt(vessel, vesselId);
             return;
         }
         player.connection.teleport(vessel.getX(), vessel.getY(), vessel.getZ(), player.getYRot(), player.getXRot());
@@ -381,6 +416,57 @@ public class VesselAntiAfk {
         lastTargetPosition.put(vesselId, player.position());
         lastVesselPosition.put(vesselId, vessel.position());
         lastEngagementTick.put(vesselId, now);
+        persistToNbt(vessel, vesselId);
+    }
+
+    /**
+     * Persist the tracking fields that matter across server restarts (target identity,
+     * timer baseline, arena anchor) into the entity's auto-saved NBT. Cheap CompoundTag
+     * write - safe to call after every state mutation. Position/engagement-tick stamps
+     * are not persisted because they re-derive correctly from the next event tick.
+     */
+    private void persistToNbt(Entity vessel, UUID vesselId) {
+        CompoundTag tag = vessel.getPersistentData();
+        Long seen = lastTargetSeenTick.get(vesselId);
+        UUID targetUuid = lastTargetUuid.get(vesselId);
+        Vec3 anchor = vesselSpawnPosition.get(vesselId);
+        if (seen != null) tag.putLong(NBT_KEY_SEEN_TICK, seen); else tag.remove(NBT_KEY_SEEN_TICK);
+        if (targetUuid != null) tag.putUUID(NBT_KEY_TARGET_UUID, targetUuid); else tag.remove(NBT_KEY_TARGET_UUID);
+        if (anchor != null) {
+            tag.putDouble(NBT_KEY_ANCHOR_X, anchor.x);
+            tag.putDouble(NBT_KEY_ANCHOR_Y, anchor.y);
+            tag.putDouble(NBT_KEY_ANCHOR_Z, anchor.z);
+        } else {
+            tag.remove(NBT_KEY_ANCHOR_X);
+            tag.remove(NBT_KEY_ANCHOR_Y);
+            tag.remove(NBT_KEY_ANCHOR_Z);
+        }
+    }
+
+    /**
+     * Restore tracking state from entity NBT into the in-memory maps. Called on
+     * EntityJoinWorldEvent so that chunk reload AND full server restart both restore
+     * the same way - in-memory maps are pure cache, NBT is the source of truth.
+     */
+    private void loadFromNbt(Entity vessel, UUID vesselId) {
+        CompoundTag tag = vessel.getPersistentData();
+        if (tag.contains(NBT_KEY_SEEN_TICK)) {
+            lastTargetSeenTick.put(vesselId, tag.getLong(NBT_KEY_SEEN_TICK));
+        }
+        if (tag.hasUUID(NBT_KEY_TARGET_UUID)) {
+            lastTargetUuid.put(vesselId, tag.getUUID(NBT_KEY_TARGET_UUID));
+        }
+        if (tag.contains(NBT_KEY_ANCHOR_X) && tag.contains(NBT_KEY_ANCHOR_Y) && tag.contains(NBT_KEY_ANCHOR_Z)) {
+            vesselSpawnPosition.put(vesselId, new Vec3(
+                    tag.getDouble(NBT_KEY_ANCHOR_X),
+                    tag.getDouble(NBT_KEY_ANCHOR_Y),
+                    tag.getDouble(NBT_KEY_ANCHOR_Z)));
+            debug("Vessel {} restored from NBT: anchor={}, seen={}, targetUuid={}",
+                    shortId(vesselId),
+                    fmt(vesselSpawnPosition.get(vesselId)),
+                    lastTargetSeenTick.get(vesselId),
+                    lastTargetUuid.get(vesselId));
+        }
     }
 
     private void maybeLogSnapshot(UUID vesselId, long now, Mob vessel, LivingEntity target, double distSq, String label) {
@@ -407,7 +493,7 @@ public class VesselAntiAfk {
     }
 
     private void debug(String fmt, Object... args) {
-        if (DEBUG) {
+        if (debugEnabled){
             MasuCraftFixes.LOGGER.info("[VesselAntiAfk DEBUG] " + fmt, args);
         }
     }
