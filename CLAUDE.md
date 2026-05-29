@@ -15,8 +15,15 @@ Output JAR: `build/libs/masucraftfixes-wolds-<version>.jar`.
 
 ## Package Structure
 
-- `com.masuary.masucraftfixes` - main mod class, event handler, LuckPerms integration
+- `com.masuary.masucraftfixes` - main mod class, event handler, LuckPerms integration, Vessel anti-AFK
 - `com.masuary.masucraftfixes.mixin` - all mixins
+
+## Event Handlers
+
+| Class | Purpose |
+|---|---|
+| `EventHandler` | Player-limit bypass (`ignores_player_limit` tag) on login |
+| `VesselAntiAfk` | Greed Vessel anti-cheese, three behaviors: **(1) Pull timer** - stamps engagement on Vessel taking/dealing damage, target/Vessel moving >3 blocks, or `target.hurtTime > 0` (catches no-entity damage sources like Soul Tether). After `TIMEOUT_TICKS` of no engagement with target >12 blocks away, teleports player onto the Vessel. **(2) Lost-target pull** - tracks last target UUID; if Vessel goes `LOST_TARGET_TIMEOUT_TICKS` without any target, looks up the last player by UUID in the server's player list and yanks them back to the Vessel (same-dim only). **(3) Out-of-world rescue** - captures Vessel spawn position on `EntityJoinWorldEvent`; if Vessel later takes `OUT_OF_WORLD` damage (fell out of arena), cancels the damage via `LivingAttackEvent`, teleports it back to the anchor, zeros velocity/fallDistance. Anchor preserved across chunk reload, dropped only on KILLED/DISCARDED. **Teleport-jump filter** (`MAX_LEGIT_MOVE_SQ = 100`): per-tick movement >10 blocks is treated as a teleport and silently rebaselines without stamping (kills the void-respawn-mod spam-stamp exploit). Class detection via class-hierarchy name walk to handle subclasses without geckolib transitive dep. `DEBUG = true` flag emits verbose `[VesselAntiAfk DEBUG]` traces. |
 
 ## Mixins
 

@@ -1,0 +1,390 @@
+package com.masuary.masucraftfixes;
+
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.entity.EntityLeaveWorldEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class VesselAntiAfk {
+
+    private static final boolean DEBUG = true;
+
+    private static final String VESSEL_CLASS_NAME = "iskallia.vault.entity.boss.TheVesselEntity";
+    private static final long TIMEOUT_TICKS = 300L;
+    private static final long LOST_TARGET_TIMEOUT_TICKS = 1200L;
+    private static final long DEBUG_SNAPSHOT_INTERVAL_TICKS = 100L;
+    private static final double MOVE_THRESHOLD_SQ = 9.0;
+    private static final double MAX_LEGIT_MOVE_SQ = 100.0;
+    private static final double MIN_TELEPORT_DISTANCE_SQ = 144.0;
+
+    private static final Map<UUID, Long> lastEngagementTick = new HashMap<>();
+    private static final Map<UUID, Long> lastTargetSeenTick = new HashMap<>();
+    private static final Map<UUID, UUID> lastTargetUuid = new HashMap<>();
+    private static final Map<UUID, Vec3> lastTargetPosition = new HashMap<>();
+    private static final Map<UUID, Vec3> lastVesselPosition = new HashMap<>();
+    private static final Map<UUID, Long> lastDebugSnapshotTick = new HashMap<>();
+    /**
+     * Position the Vessel first appeared at (captured on EntityJoinWorldEvent). Used to
+     * rescue a Vessel that has glitched out of its arena and fallen into the void - if it
+     * starts taking {@code outOfWorld} damage we teleport it back here and cancel the
+     * damage, instead of letting the player AFK while the Vessel slowly dies below the
+     * world. Cleared on EntityLeaveWorldEvent.
+     */
+    private static final Map<UUID, Vec3> vesselSpawnPosition = new HashMap<>();
+
+    @SubscribeEvent
+    public void onEntityJoinWorld(EntityJoinWorldEvent event) {
+        if (event.getWorld().isClientSide || !(event.getEntity() instanceof LivingEntity entity)) {
+            return;
+        }
+        if (!isVessel(entity)) {
+            return;
+        }
+        UUID vesselId = entity.getUUID();
+        // Only capture on the very first join (vessel UUID won't appear in the map yet).
+        // Chunk-unload/reload re-fires this event - in that case keep the original arena
+        // position rather than overwriting with wherever the vessel happens to be now.
+        if (vesselSpawnPosition.containsKey(vesselId)) {
+            debug("Vessel {} re-joined world (kept original spawn pos {})",
+                    shortId(vesselId), fmt(vesselSpawnPosition.get(vesselId)));
+            return;
+        }
+        vesselSpawnPosition.put(vesselId, entity.position());
+        debug("Vessel {} joined world at {} (arena rescue anchor)",
+                shortId(vesselId), fmt(entity.position()));
+    }
+
+    /**
+     * Cancel {@code outOfWorld} damage on a Vessel and teleport it back to its arena
+     * spawn position. Fires before damage is calculated, so a single intercept here is
+     * cheaper and cleaner than letting LivingDamageEvent fire and trying to undo damage
+     * after the fact. Cancelling stops the player exploit where a Vessel glitches off
+     * the arena and the player AFKs while it slowly dies below Y=-64.
+     */
+    @SubscribeEvent
+    public void onLivingAttack(LivingAttackEvent event) {
+        LivingEntity victim = event.getEntityLiving();
+        if (victim.level.isClientSide || !isVessel(victim)) {
+            return;
+        }
+        if (event.getSource() != DamageSource.OUT_OF_WORLD) {
+            return;
+        }
+        UUID vesselId = victim.getUUID();
+        Vec3 anchor = vesselSpawnPosition.get(vesselId);
+        if (anchor == null) {
+            // No spawn captured (vessel was already in world when mod loaded). Cancel
+            // the damage anyway - better to leave the vessel stranded than let it die
+            // and complete the AFK exploit.
+            event.setCanceled(true);
+            debug("Vessel {} took outOfWorld damage but no spawn anchor captured - damage cancelled, no teleport",
+                    shortId(vesselId));
+            return;
+        }
+        victim.teleportTo(anchor.x, anchor.y, anchor.z);
+        victim.setDeltaMovement(Vec3.ZERO);
+        victim.fallDistance = 0.0f;
+        event.setCanceled(true);
+        MasuCraftFixes.LOGGER.info(
+                "[VesselAntiAfk] Vessel {} fell out of arena (Y={}), rescued back to {} and damage cancelled.",
+                vesselId, String.format("%.1f", victim.getY()), fmt(anchor));
+    }
+
+    @SubscribeEvent
+    public void onTargetChanged(LivingChangeTargetEvent event) {
+        LivingEntity entity = event.getEntityLiving();
+        if (entity.level.isClientSide || !isVessel(entity)) {
+            return;
+        }
+        LivingEntity newTarget = event.getNewTarget();
+        UUID vesselId = entity.getUUID();
+        long now = entity.level.getGameTime();
+        if (newTarget == null) {
+            debug("Vessel {} target cleared (was tracked={})", shortId(vesselId), lastTargetSeenTick.containsKey(vesselId));
+            return;
+        }
+        lastEngagementTick.put(vesselId, now);
+        lastTargetSeenTick.put(vesselId, now);
+        lastTargetUuid.put(vesselId, newTarget.getUUID());
+        lastTargetPosition.put(vesselId, newTarget.position());
+        lastVesselPosition.put(vesselId, entity.position());
+        debug("Vessel {} acquired target {} at {} (vessel at {}, dist={})",
+                shortId(vesselId),
+                newTarget.getName().getString(),
+                fmt(newTarget.position()),
+                fmt(entity.position()),
+                String.format("%.1f", Math.sqrt(entity.distanceToSqr(newTarget))));
+    }
+
+    @SubscribeEvent
+    public void onLivingDamage(LivingDamageEvent event) {
+        LivingEntity victim = event.getEntityLiving();
+        if (isVessel(victim)) {
+            stampEngagement(victim);
+            debug("Vessel {} took {} damage from {}",
+                    shortId(victim.getUUID()),
+                    String.format("%.2f", event.getAmount()),
+                    event.getSource().msgId);
+            return;
+        }
+        if (event.getSource().getEntity() instanceof LivingEntity attacker && isVessel(attacker)) {
+            stampEngagement(attacker);
+            debug("Vessel {} dealt {} damage to {} via {}",
+                    shortId(attacker.getUUID()),
+                    String.format("%.2f", event.getAmount()),
+                    victim.getName().getString(),
+                    event.getSource().msgId);
+        }
+    }
+
+    @SubscribeEvent
+    public void onLivingTick(LivingEvent.LivingUpdateEvent event) {
+        LivingEntity entity = event.getEntityLiving();
+        if (!isVessel(entity) || !(entity instanceof Mob vessel)) {
+            return;
+        }
+        if (vessel.level.isClientSide) {
+            return;
+        }
+
+        UUID vesselId = vessel.getUUID();
+        long now = vessel.level.getGameTime();
+        LivingEntity target = vessel.getTarget();
+
+        if (target == null || !target.isAlive() || target.level != vessel.level) {
+            Long lastSeen = lastTargetSeenTick.get(vesselId);
+            if (lastSeen != null) {
+                long elapsed = now - lastSeen;
+                if (elapsed > LOST_TARGET_TIMEOUT_TICKS) {
+                    pullLostTarget(vessel, vesselId, lastSeen, now);
+                } else if (DEBUG && elapsed > 0 && elapsed % DEBUG_SNAPSHOT_INTERVAL_TICKS == 0) {
+                    debug("Vessel {} no target ({}s elapsed, despawn at {}s)",
+                            shortId(vesselId), elapsed / 20, LOST_TARGET_TIMEOUT_TICKS / 20);
+                }
+            }
+            return;
+        }
+
+        lastTargetSeenTick.put(vesselId, now);
+
+        Vec3 previousTargetPosition = lastTargetPosition.get(vesselId);
+        Vec3 currentTargetPosition = target.position();
+        double targetMoveSq = previousTargetPosition == null ? 0.0 : currentTargetPosition.distanceToSqr(previousTargetPosition);
+        boolean targetTeleported = targetMoveSq > MAX_LEGIT_MOVE_SQ;
+        boolean targetMovedLegit = !targetTeleported && targetMoveSq > MOVE_THRESHOLD_SQ;
+
+        Vec3 previousVesselPosition = lastVesselPosition.get(vesselId);
+        Vec3 currentVesselPosition = vessel.position();
+        double vesselMoveSq = previousVesselPosition == null ? 0.0 : currentVesselPosition.distanceToSqr(previousVesselPosition);
+        boolean vesselTeleported = vesselMoveSq > MAX_LEGIT_MOVE_SQ;
+        boolean vesselMovedLegit = !vesselTeleported && vesselMoveSq > MOVE_THRESHOLD_SQ;
+
+        boolean targetTookDamage = target.hurtTime > 0;
+
+        if (targetTeleported) {
+            lastTargetPosition.put(vesselId, currentTargetPosition);
+            debug("Vessel {} target teleport filtered ({} blocks, no stamp)",
+                    shortId(vesselId), String.format("%.1f", Math.sqrt(targetMoveSq)));
+        }
+        if (vesselTeleported) {
+            lastVesselPosition.put(vesselId, currentVesselPosition);
+            debug("Vessel {} self-teleport filtered ({} blocks, no stamp)",
+                    shortId(vesselId), String.format("%.1f", Math.sqrt(vesselMoveSq)));
+        }
+
+        if (targetMovedLegit || vesselMovedLegit || targetTookDamage) {
+            lastTargetPosition.put(vesselId, currentTargetPosition);
+            lastVesselPosition.put(vesselId, currentVesselPosition);
+            lastEngagementTick.put(vesselId, now);
+            if (DEBUG) {
+                StringBuilder reasons = new StringBuilder();
+                if (targetMovedLegit) reasons.append("targetMoved(").append(String.format("%.1f", Math.sqrt(targetMoveSq))).append("b) ");
+                if (vesselMovedLegit) reasons.append("vesselMoved(").append(String.format("%.1f", Math.sqrt(vesselMoveSq))).append("b) ");
+                if (targetTookDamage) reasons.append("hurtTime(").append(target.hurtTime).append(") ");
+                logSnapshot(vesselId, now, "stamp: " + reasons.toString().trim());
+            }
+        }
+
+        double distSq = vessel.distanceToSqr(target);
+        if (distSq < MIN_TELEPORT_DISTANCE_SQ) {
+            if (DEBUG) maybeLogSnapshot(vesselId, now, vessel, target, distSq, "in-range, gated");
+            return;
+        }
+
+        long lastTick = lastEngagementTick.getOrDefault(vesselId, now);
+        long sinceEngagement = now - lastTick;
+        if (sinceEngagement > TIMEOUT_TICKS) {
+            debug("Vessel {} TIMEOUT - pulling {} (since engagement: {}s, dist: {}b)",
+                    shortId(vesselId), target.getName().getString(), sinceEngagement / 20, String.format("%.1f", Math.sqrt(distSq)));
+            forceEngagement(vessel, target);
+            lastEngagementTick.put(vesselId, now);
+            lastTargetPosition.put(vesselId, target.position());
+            lastVesselPosition.put(vesselId, vessel.position());
+        } else if (DEBUG) {
+            maybeLogSnapshot(vesselId, now, vessel, target, distSq, "out-of-range, ticking");
+        }
+    }
+
+    @SubscribeEvent
+    public void onEntityLeaveWorld(EntityLeaveWorldEvent event) {
+        if (event.getWorld().isClientSide || !(event.getEntity() instanceof LivingEntity entity)) {
+            return;
+        }
+        if (isVessel(entity)) {
+            UUID vesselId = entity.getUUID();
+            lastEngagementTick.remove(vesselId);
+            lastTargetSeenTick.remove(vesselId);
+            lastTargetUuid.remove(vesselId);
+            lastTargetPosition.remove(vesselId);
+            lastVesselPosition.remove(vesselId);
+            lastDebugSnapshotTick.remove(vesselId);
+            // Only drop the spawn anchor if the vessel is *permanently* gone (killed or
+            // explicitly discarded). Chunk-unload / player-unload / dimension-change all
+            // fire EntityLeaveWorldEvent but the vessel will re-join the same world from
+            // NBT later - we must preserve the original arena anchor across those.
+            net.minecraft.world.entity.Entity.RemovalReason removal = entity.getRemovalReason();
+            if (removal == net.minecraft.world.entity.Entity.RemovalReason.KILLED
+                    || removal == net.minecraft.world.entity.Entity.RemovalReason.DISCARDED) {
+                vesselSpawnPosition.remove(vesselId);
+                debug("Vessel {} left world (cleanup, reason={}, spawn anchor dropped)",
+                        shortId(vesselId), removal);
+            } else {
+                debug("Vessel {} left world (cleanup, reason={}, spawn anchor kept)",
+                        shortId(vesselId), removal);
+            }
+        }
+    }
+
+    private boolean isVessel(LivingEntity entity) {
+        if (entity == null) {
+            return false;
+        }
+        for (Class<?> klass = entity.getClass(); klass != null; klass = klass.getSuperclass()) {
+            if (klass.getName().equals(VESSEL_CLASS_NAME)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void stampEngagement(LivingEntity vessel) {
+        if (vessel.level.isClientSide) {
+            return;
+        }
+        UUID vesselId = vessel.getUUID();
+        long now = vessel.level.getGameTime();
+        lastEngagementTick.put(vesselId, now);
+        lastVesselPosition.put(vesselId, vessel.position());
+        if (vessel instanceof Mob mob) {
+            LivingEntity target = mob.getTarget();
+            if (target != null) {
+                lastTargetSeenTick.put(vesselId, now);
+                lastTargetUuid.put(vesselId, target.getUUID());
+                lastTargetPosition.put(vesselId, target.position());
+            }
+        }
+    }
+
+    private void forceEngagement(Mob vessel, LivingEntity target) {
+        double targetX = vessel.getX();
+        double targetY = vessel.getY();
+        double targetZ = vessel.getZ();
+        if (target instanceof ServerPlayer serverPlayerTarget) {
+            serverPlayerTarget.connection.teleport(targetX, targetY, targetZ, serverPlayerTarget.getYRot(), serverPlayerTarget.getXRot());
+        } else {
+            target.teleportTo(targetX, targetY, targetZ);
+        }
+        MasuCraftFixes.LOGGER.info(
+                "[VesselAntiAfk] Pulled {} to Vessel {} after {}s of no engagement",
+                target.getName().getString(),
+                vessel.getUUID(),
+                TIMEOUT_TICKS / 20
+        );
+    }
+
+    private void pullLostTarget(Mob vessel, UUID vesselId, long lastSeenTick, long now) {
+        UUID targetUuid = lastTargetUuid.get(vesselId);
+        if (targetUuid == null) {
+            debug("Vessel {} lost-target timeout but no stored target UUID", shortId(vesselId));
+            lastTargetSeenTick.put(vesselId, now);
+            return;
+        }
+        if (!(vessel.level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        ServerPlayer player = serverLevel.getServer().getPlayerList().getPlayer(targetUuid);
+        if (player == null) {
+            debug("Vessel {} lost-target timeout but player {} is offline (retry in {}s)",
+                    shortId(vesselId), targetUuid, LOST_TARGET_TIMEOUT_TICKS / 20);
+            lastTargetSeenTick.put(vesselId, now);
+            return;
+        }
+        if (player.level != vessel.level) {
+            debug("Vessel {} lost-target timeout but player {} is in another dimension (retry in {}s)",
+                    shortId(vesselId), player.getName().getString(), LOST_TARGET_TIMEOUT_TICKS / 20);
+            lastTargetSeenTick.put(vesselId, now);
+            return;
+        }
+        player.connection.teleport(vessel.getX(), vessel.getY(), vessel.getZ(), player.getYRot(), player.getXRot());
+        MasuCraftFixes.LOGGER.info(
+                "[VesselAntiAfk] Pulled {} back to Vessel {} after {}s without target",
+                player.getName().getString(),
+                vessel.getUUID(),
+                (now - lastSeenTick) / 20
+        );
+        lastTargetSeenTick.put(vesselId, now);
+        lastTargetPosition.put(vesselId, player.position());
+        lastVesselPosition.put(vesselId, vessel.position());
+        lastEngagementTick.put(vesselId, now);
+    }
+
+    private void maybeLogSnapshot(UUID vesselId, long now, Mob vessel, LivingEntity target, double distSq, String label) {
+        Long lastDbg = lastDebugSnapshotTick.get(vesselId);
+        if (lastDbg != null && now - lastDbg < DEBUG_SNAPSHOT_INTERVAL_TICKS) {
+            return;
+        }
+        long lastEng = lastEngagementTick.getOrDefault(vesselId, now);
+        Long lastSeen = lastTargetSeenTick.get(vesselId);
+        debug("Vessel {} {}: target={} at {}, vessel at {}, dist={}b, sinceEngagement={}s, sinceTargetSeen={}s",
+                shortId(vesselId),
+                label,
+                target.getName().getString(),
+                fmt(target.position()),
+                fmt(vessel.position()),
+                String.format("%.1f", Math.sqrt(distSq)),
+                (now - lastEng) / 20,
+                lastSeen == null ? "n/a" : ((now - lastSeen) / 20) + "");
+        lastDebugSnapshotTick.put(vesselId, now);
+    }
+
+    private void logSnapshot(UUID vesselId, long now, String reason) {
+        debug("Vessel {} {}", shortId(vesselId), reason);
+    }
+
+    private void debug(String fmt, Object... args) {
+        if (DEBUG) {
+            MasuCraftFixes.LOGGER.info("[VesselAntiAfk DEBUG] " + fmt, args);
+        }
+    }
+
+    private static String shortId(UUID id) {
+        return id.toString().substring(0, 8);
+    }
+
+    private static String fmt(Vec3 v) {
+        return String.format("(%.1f,%.1f,%.1f)", v.x, v.y, v.z);
+    }
+}
