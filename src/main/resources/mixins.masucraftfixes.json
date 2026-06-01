@@ -1,10 +1,19 @@
 {
   "package": "com.masuary.masucraftfixes.mixin",
+  "plugin": "com.masuary.masucraftfixes.MasuCraftFixesMixinPlugin",
   "minVersion": "0.6",
   "required": true,
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "AngelExpertiseMixin",
+    "CasinoCraftBlockEntityMachineMixin",
+    "CasinoCraftMenuProviderMixin",
+    "CasinoCraftMessageInventoryServerHandlerMixin",
+    "CasinoCraftMessagePlayerServerHandlerMixin",
+    "CasinoCraftMessageScoreServerHandlerMixin",
+    "CasinoCraftMessageSettingServerHandlerMixin",
+    "CasinoCraftMessageStartServerHandlerMixin",
+    "CasinoCraftMessageStateServerHandlerMixin",
     "FTBCheatCommandsMixin",
     "ServerPlayerMixin"
   ],
