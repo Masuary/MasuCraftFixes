@@ -116,13 +116,14 @@ public class VesselAntiAfk {
                     shortId(vesselId));
             return;
         }
+        double fallenY = victim.getY();
         victim.teleportTo(anchor.x, anchor.y, anchor.z);
         victim.setDeltaMovement(Vec3.ZERO);
         victim.fallDistance = 0.0f;
         event.setCanceled(true);
         MasuCraftFixes.LOGGER.info(
                 "[VesselAntiAfk] Vessel {} fell out of arena (Y={}), rescued back to {} and damage cancelled.",
-                vesselId, String.format("%.1f", victim.getY()), fmt(anchor));
+                vesselId, String.format("%.1f", fallenY), fmt(anchor));
     }
 
     @SubscribeEvent
