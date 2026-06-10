@@ -34,6 +34,8 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 | `AngelExpertiseMixin` | `AngelExpertise` (The Vault) | Prevents angel expertise from stripping FTB `/fly` flight |
 | `FTBCheatCommandsMixin` | `CheatCommands` (FTB Essentials) | Blocks `/fly` inside vault dimensions |
 | `ServerPlayerMixin` | `ServerPlayer` | Disables active FTB flight inside vault dimensions each tick |
+| `VaultListenerSyncReplaceMixin` | `Listener` (The Vault 3.21.5.6573) | Replaces most per-tick active-vault FULL syncs with HUD-root DIFF syncs, keeps forced/periodic FULL baselines, and skips stale offworld listener sync |
+| `VaultMessageSyncTelemetryMixin` | `VaultMessage.Sync` (The Vault) | Records vault sync payload bytes, construction time, and FULL/HUD_DIFF reason summaries |
 
 ## LuckPerms Permissions
 
@@ -45,7 +47,7 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 
 Local JARs in `deps/`:
 - `luckperms-forge.jar` - LuckPerms Forge API
-- `the_vault-1.18.2-3.20.3.6055.jar` / `the_vault-1.18.2-3.21.2.6474.jar` - The Vault mod (mixin targets)
+- `the_vault-1.18.2-3.20.3.6055.jar` / `the_vault-1.18.2-3.21.2.6474.jar` / `the_vault-1.18.2-3.21.5.6573.jar` - The Vault mod (mixin targets; Wolds sync mitigation compiles against 3.21.5.6573)
 
 Remote (via CurseMaven):
 - FTB Essentials, Quark, AutoRegLib, LuckPerms

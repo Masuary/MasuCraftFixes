@@ -2,6 +2,31 @@
 
 ## Completed
 
+### Wolds Vault Sync Mitigation (2026-06-10, v1.7.0)
+**Problem:** Vault Hunters `Listener.tickServer` sends a `SyncMode.FULL` `VaultMessage.Sync` every tick for every online vault listener. On modifier-heavy Wolds vaults this serializes the full client vault tree on the server thread and can stall TPS or trip the watchdog.
+
+**Solution:** Added a narrow server-side mixin patch:
+- Skip active sync when the listener's player is no longer in that virtual vault world.
+- Keep vanilla FULL packets for first sync, join/rejoin baseline resets, finish, modifier-count changes, and periodic staggered refreshes.
+- Replace normal per-tick FULL packets with root-level `SyncMode.DIFF` packets containing HUD-critical roots: `VERSION`, `ID`, `LEVEL`, `CLOCK`, `LISTENERS`, `OBJECTIVES`, `OVERLAY`, `COMPANION_EGG_HUNT`, `SOUND`, and `FINISHED` when present.
+- Add `VaultMessage.Sync` telemetry for payload bytes, constructor time, offworld skips, state resets, and FULL/HUD_DIFF reason summaries.
+
+Runtime system-property kill switches/defaults:
+- `masucraftfixes.vaultSync.offworldGuard=true`
+- `masucraftfixes.vaultSync.hudDiffEnabled=true`
+- `masucraftfixes.vaultSync.fullRefreshIntervalTicks=20`
+- `masucraftfixes.vaultSync.forceFullOnModifierCountChange=true`
+
+If a client regression appears, set `-Dmasucraftfixes.vaultSync.hudDiffEnabled=false` to fall back to vanilla FULL sync behavior while keeping the offworld guard and telemetry.
+
+**Files:**
+- `src/main/java/com/masuary/masucraftfixes/VaultSyncPolicy.java` (new)
+- `src/main/java/com/masuary/masucraftfixes/VaultSyncTelemetry.java` (new)
+- `src/main/java/com/masuary/masucraftfixes/mixin/VaultListenerSyncReplaceMixin.java` (new)
+- `src/main/java/com/masuary/masucraftfixes/mixin/VaultMessageSyncTelemetryMixin.java` (new)
+- `build.gradle` (version bumped to 1.7.0, VH compile target updated to 3.21.5.6573)
+- `mixins.masucraftfixes.json` (registered vault sync mixins)
+
 ### Angel Expertise Flight Fix (2026-03-28)
 **Problem:** AngelExpertise.onTick() strips FTB `/fly` flight every tick when player isn't near an Angel Block, applying Slow Falling instead.
 

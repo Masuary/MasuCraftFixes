@@ -17,7 +17,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
 
-version = '1.6.4'
+version = '1.7.0'
 group = 'com.masuary.masucraftfixes'
 archivesBaseName = 'masucraftfixes-wolds'
 
@@ -83,7 +83,7 @@ dependencies {
     implementation fg.deobf("curse.maven:autoreglib-250363:3642382")
     implementation fg.deobf("curse.maven:quark-243121:3840125")
     implementation fg.deobf(files("deps/luckperms-forge.jar"))
-    implementation fg.deobf(files("deps/the_vault-1.18.2-3.21.2.6474.jar"))
+    implementation fg.deobf(files("deps/the_vault-1.18.2-3.21.5.6573.jar"))
     implementation fg.deobf(files("deps/craftingtweaks-forge-1.18.2-14.0.9.jar"))
     implementation 'net.luckperms:api:5.4'
     implementation fg.deobf("curse.maven:ftbessentials-410811:4462414")

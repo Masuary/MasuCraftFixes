@@ -18,6 +18,7 @@ public class MasuCraftFixes {
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         MinecraftForge.EVENT_BUS.register(new VesselAntiAfk());
         MinecraftForge.EVENT_BUS.register(VesselAntiAfkCommand.class);
+        MinecraftForge.EVENT_BUS.addListener(VaultSyncPolicy::onPlayerLogout);
         LOGGER.info("MasuCraftFixes initialized");
     }
 
