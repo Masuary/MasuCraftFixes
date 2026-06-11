@@ -14,10 +14,12 @@ public class MasuCraftFixes {
     public static final Logger LOGGER = LogManager.getLogger();
 
     public MasuCraftFixes() {
+        VaultSyncConfig.bootstrap();
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         MinecraftForge.EVENT_BUS.register(new VesselAntiAfk());
         MinecraftForge.EVENT_BUS.register(VesselAntiAfkCommand.class);
+        MinecraftForge.EVENT_BUS.register(VaultSyncCommand.class);
         MinecraftForge.EVENT_BUS.addListener(VaultSyncPolicy::onPlayerLogout);
         LOGGER.info("MasuCraftFixes initialized");
     }

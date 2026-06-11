@@ -20,7 +20,6 @@ public final class VaultSyncPolicy {
     private static final boolean OFFWORLD_GUARD_ENABLED = boolProperty("masucraftfixes.vaultSync.offworldGuard", true);
     private static final boolean HUD_DIFF_ENABLED = boolProperty("masucraftfixes.vaultSync.hudDiffEnabled", true);
     private static final boolean FORCE_FULL_ON_MODIFIER_COUNT_CHANGE = boolProperty("masucraftfixes.vaultSync.forceFullOnModifierCountChange", true);
-    private static final int FULL_REFRESH_INTERVAL_TICKS = Math.max(1, intProperty("masucraftfixes.vaultSync.fullRefreshIntervalTicks", 20));
     private static final int STATE_EXPIRY_TICKS = Math.max(1200, intProperty("masucraftfixes.vaultSync.stateExpiryTicks", 12000));
     private static final int CLEANUP_INTERVAL_TICKS = Math.max(200, intProperty("masucraftfixes.vaultSync.cleanupIntervalTicks", 1200));
 
@@ -173,10 +172,11 @@ public final class VaultSyncPolicy {
     }
 
     private static int nextPeriodicFullTick(int tick, UUID playerId, UUID vaultId) {
-        int earliest = tick + FULL_REFRESH_INTERVAL_TICKS;
-        int offset = Math.floorMod(playerId.hashCode() ^ vaultId.hashCode(), FULL_REFRESH_INTERVAL_TICKS);
-        int remainder = Math.floorMod(earliest - offset, FULL_REFRESH_INTERVAL_TICKS);
-        return remainder == 0 ? earliest : earliest + (FULL_REFRESH_INTERVAL_TICKS - remainder);
+        int interval = VaultSyncConfig.fullRefreshIntervalTicks();
+        int earliest = tick + interval;
+        int offset = Math.floorMod(playerId.hashCode() ^ vaultId.hashCode(), interval);
+        int remainder = Math.floorMod(earliest - offset, interval);
+        return remainder == 0 ? earliest : earliest + (interval - remainder);
     }
 
     private static int modifierCount(Vault vault) {

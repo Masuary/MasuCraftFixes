@@ -5,26 +5,22 @@ import iskallia.vault.core.vault.Vault;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-import java.util.Map;
+import java.io.IOException;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
 public final class VaultSyncTelemetry {
-    private static final Logger LOGGER = LogManager.getLogger("MasuCraftFixes/VaultSync");
-
-    private static final boolean LOG_EACH_SYNC = boolProperty("masucraftfixes.vaultSync.logEachSync", false);
-    private static final int SUMMARY_INTERVAL_TICKS = Math.max(20, intProperty("masucraftfixes.vaultSync.summaryIntervalTicks", 600));
-    private static final int FULL_WARN_BYTES = Math.max(0, intProperty("masucraftfixes.vaultSync.logFullOverBytes", 524288));
-    private static final int HUD_WARN_BYTES = Math.max(0, intProperty("masucraftfixes.vaultSync.logHudDiffOverBytes", 131072));
-    private static final long SLOW_WARN_NANOS = Math.max(0L, longProperty("masucraftfixes.vaultSync.logSlowOverMs", 10L) * 1_000_000L);
-
     private static final ThreadLocal<Long> CONSTRUCTION_START_NANOS = new ThreadLocal<>();
     private static final ThreadLocal<SyncMarker> NEXT_MARKER = new ThreadLocal<>();
 
@@ -36,6 +32,7 @@ public final class VaultSyncTelemetry {
     private static final ConcurrentHashMap<String, LongAdder> FULL_REASONS = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, LongAdder> HUD_REASONS = new ConcurrentHashMap<>();
     private static final AtomicInteger LAST_SUMMARY_TICK = new AtomicInteger();
+    private static final AtomicBoolean LOG_WRITE_FAILURE_REPORTED = new AtomicBoolean();
 
     private VaultSyncTelemetry() {
     }
@@ -77,16 +74,15 @@ public final class VaultSyncTelemetry {
             OTHER.record(bytes, nanos);
         }
 
-        if (LOG_EACH_SYNC || shouldWarn(kind, bytes, nanos)) {
-            LOGGER.info(
-                "vault_sync_packet kind={} mode={} reason={} player={} vault={} payloadBytes={} buildMs={}",
-                kind.name(),
-                mode,
-                reason,
-                player.getName().getString(),
-                vaultId(vault),
-                bytes,
-                formatMillis(nanos)
+        if (VaultSyncConfig.isTelemetryEnabled() && (VaultSyncConfig.logEachSync() || shouldWarn(kind, bytes, nanos))) {
+            writeTelemetry(
+                "vault_sync_packet kind=" + kind.name()
+                    + " mode=" + mode
+                    + " reason=" + reason
+                    + " player=" + player.getName().getString()
+                    + " vault=" + vaultId(vault)
+                    + " payloadBytes=" + bytes
+                    + " buildMs=" + formatMillis(nanos)
             );
         }
 
@@ -95,19 +91,37 @@ public final class VaultSyncTelemetry {
 
     public static void recordOffworldSkip(ServerPlayer player, Vault vault, ResourceKey<Level> playerDimension, ResourceKey<Level> vaultDimension) {
         OFFWORLD_SKIPS.increment();
-        LOGGER.debug(
-            "vault_sync_offworld_skip player={} vault={} playerDim={} vaultDim={}",
-            player.getName().getString(),
-            vaultId(vault),
-            playerDimension.location(),
-            vaultDimension.location()
-        );
+        if (VaultSyncConfig.isTelemetryEnabled()) {
+            writeTelemetry(
+                "vault_sync_offworld_skip player=" + player.getName().getString()
+                    + " vault=" + vaultId(vault)
+                    + " playerDim=" + playerDimension.location()
+                    + " vaultDim=" + vaultDimension.location()
+            );
+        }
         maybeLogSummary(player);
     }
 
     public static void recordStateReset(UUID playerId, UUID vaultId, String reason, int removed) {
         STATE_RESETS.add(removed);
-        LOGGER.debug("vault_sync_state_reset player={} vault={} reason={} removed={}", playerId, vaultId, reason, removed);
+        if (VaultSyncConfig.isTelemetryEnabled()) {
+            writeTelemetry(
+                "vault_sync_state_reset player=" + playerId
+                    + " vault=" + vaultId
+                    + " reason=" + reason
+                    + " removed=" + removed
+            );
+        }
+    }
+
+    public static String currentSummary() {
+        return "full=" + FULL.summary()
+            + " hudDiff=" + HUD_DIFF.summary()
+            + " other=" + OTHER.summary()
+            + " offworldSkips=" + OFFWORLD_SKIPS.sum()
+            + " stateResets=" + STATE_RESETS.sum()
+            + " fullReasons=" + reasonSummary(FULL_REASONS)
+            + " hudReasons=" + reasonSummary(HUD_REASONS);
     }
 
     private static SyncKind classify(SyncMode mode, SyncMarker marker) {
@@ -125,23 +139,28 @@ public final class VaultSyncTelemetry {
     }
 
     private static boolean shouldWarn(SyncKind kind, int bytes, long nanos) {
-        if (kind == SyncKind.FULL && FULL_WARN_BYTES > 0 && bytes >= FULL_WARN_BYTES) {
+        if (kind == SyncKind.FULL && VaultSyncConfig.fullWarnBytes() > 0 && bytes >= VaultSyncConfig.fullWarnBytes()) {
             return true;
         }
-        if (kind == SyncKind.HUD_DIFF && HUD_WARN_BYTES > 0 && bytes >= HUD_WARN_BYTES) {
+        if (kind == SyncKind.HUD_DIFF && VaultSyncConfig.hudWarnBytes() > 0 && bytes >= VaultSyncConfig.hudWarnBytes()) {
             return true;
         }
-        return SLOW_WARN_NANOS > 0 && nanos >= SLOW_WARN_NANOS;
+        long slowWarnNanos = VaultSyncConfig.slowWarnNanos();
+        return slowWarnNanos > 0L && nanos >= slowWarnNanos;
     }
 
     private static void maybeLogSummary(ServerPlayer player) {
+        if (!VaultSyncConfig.isTelemetryEnabled()) {
+            return;
+        }
+
         if (player.server == null) {
             return;
         }
 
         int tick = player.server.getTickCount();
         int last = LAST_SUMMARY_TICK.get();
-        if (tick - last < SUMMARY_INTERVAL_TICKS) {
+        if (tick - last < VaultSyncConfig.summaryIntervalTicks()) {
             return;
         }
 
@@ -149,16 +168,8 @@ public final class VaultSyncTelemetry {
             return;
         }
 
-        LOGGER.info(
-            "vault_sync_summary tick={} full={} hudDiff={} other={} offworldSkips={} stateResets={} fullReasons={} hudReasons={}",
-            tick,
-            FULL.summary(),
-            HUD_DIFF.summary(),
-            OTHER.summary(),
-            OFFWORLD_SKIPS.sum(),
-            STATE_RESETS.sum(),
-            reasonSummary(FULL_REASONS),
-            reasonSummary(HUD_REASONS)
+        writeTelemetry(
+            "vault_sync_summary tick=" + tick + " " + currentSummary()
         );
     }
 
@@ -198,34 +209,23 @@ public final class VaultSyncTelemetry {
         return String.format(Locale.ROOT, "%.3f", nanos / 1_000_000.0D);
     }
 
-    private static boolean boolProperty(String key, boolean fallback) {
-        String value = System.getProperty(key);
-        return value == null ? fallback : Boolean.parseBoolean(value);
-    }
-
-    private static int intProperty(String key, int fallback) {
-        String value = System.getProperty(key);
-        if (value == null) {
-            return fallback;
-        }
+    private static synchronized void writeTelemetry(String message) {
+        String line = DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(ZonedDateTime.now())
+            + " " + message
+            + System.lineSeparator();
 
         try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException ignored) {
-            return fallback;
-        }
-    }
-
-    private static long longProperty(String key, long fallback) {
-        String value = System.getProperty(key);
-        if (value == null) {
-            return fallback;
-        }
-
-        try {
-            return Long.parseLong(value);
-        } catch (NumberFormatException ignored) {
-            return fallback;
+            Files.createDirectories(VaultSyncConfig.telemetryLogPath().getParent());
+            Files.writeString(
+                VaultSyncConfig.telemetryLogPath(),
+                line,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND
+            );
+        } catch (IOException exception) {
+            if (LOG_WRITE_FAILURE_REPORTED.compareAndSet(false, true)) {
+                MasuCraftFixes.LOGGER.warn("[VaultSync] Could not write telemetry log {}", VaultSyncConfig.telemetryLogPath(), exception);
+            }
         }
     }
 

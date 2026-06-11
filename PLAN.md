@@ -2,6 +2,24 @@
 
 ## Completed
 
+### Vault Sync Telemetry Controls (2026-06-11, v1.7.1)
+**Problem:** Vault sync telemetry proved the mitigation was working, but the `INFO` summaries and slow-packet diagnostics spammed the server console during active vaults.
+
+**Solution:** Moved VaultSync diagnostics behind persisted runtime settings:
+- Default telemetry is off.
+- When enabled, diagnostics write to `logs/masucraftfixes-vaultsync.log` instead of Log4j console.
+- Runtime settings persist in `config/masucraftfixes-vaultsync.properties`.
+- Added `/vaultsync` admin commands:
+  - `/vaultsync status`
+  - `/vaultsync debug true|false` (alias for telemetry on/off)
+  - `/vaultsync telemetry true|false`
+  - `/vaultsync log-each-sync true|false`
+  - `/vaultsync summary-interval <ticks>`
+  - `/vaultsync slow-threshold <ms>`
+  - `/vaultsync full-refresh-interval <ticks>`
+
+Operational note: increasing `fullRefreshIntervalTicks` reduces periodic full baselines but makes client-side vault state rely on HUD diffs for longer between healing full syncs.
+
 ### Wolds Vault Sync Mitigation (2026-06-10, v1.7.0)
 **Problem:** Vault Hunters `Listener.tickServer` sends a `SyncMode.FULL` `VaultMessage.Sync` every tick for every online vault listener. On modifier-heavy Wolds vaults this serializes the full client vault tree on the server thread and can stall TPS or trip the watchdog.
 
