@@ -17,7 +17,9 @@
     "FTBCheatCommandsMixin",
     "ServerPlayerMixin",
     "VaultListenerSyncReplaceMixin",
-    "VaultMessageSyncTelemetryMixin"
+    "VaultMessageSyncTelemetryMixin",
+    "WoldsFilterNecklaceItemTelemetryMixin",
+    "WoldsPlayerEventsTelemetryMixin"
   ],
   "injectors": {
     "maxShiftBy": 10,
