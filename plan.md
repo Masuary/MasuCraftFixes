@@ -2,9 +2,14 @@
 
 Source diagnosis:
 
+- `/home/masuary/Downloads/Logs/Y280i8UbT7-report.md`
+- `/home/masuary/Downloads/Logs/Y280i8UbT7.sparkprofile`
+- `/home/masuary/Downloads/Logs/2026-06-13-1.log`
 - `yTZhEvScpw-report.md`
 - `/home/masuary/Downloads/yTZhEvScpw.sparkprofile`
 - `/home/masuary/Downloads/masucraftfixes-vaultsync.log`
+- `/home/masuary/Downloads/Logs/masucraftfixes-stage0.log`
+- `/home/masuary/Downloads/Logs/masucraftfixes-vaultsync.log`
 - MasuCraftFixes source: `/mnt/data/MasuCraft Mods/MasuCraftFixes/src/main/java/com/masuary/masucraftfixes`
 - Wolds source: `/mnt/data/MasuCraft Mods/Wolds-Vaults-Official-Mod`
 
@@ -14,10 +19,12 @@ This plan now tracks both implementation status and remaining validation work.
 
 - Stage 0 MasuCraftFixes-only telemetry: implemented.
 - Stage 0 build validation: passed with `./gradlew build`.
-- Built artifact: `build/libs/masucraftfixes-wolds-1.7.1.jar`.
+- Stage 0 live log and Spark validation: completed from `/home/masuary/Downloads/Logs/Y280i8UbT7.sparkprofile` and matching logs on 2026-06-13.
+- Latest profile report: `/home/masuary/Downloads/Logs/Y280i8UbT7-report.md`.
+- Built artifact from Stage 0: `build/libs/masucraftfixes-wolds-1.7.1.jar`.
 - Backend 1 boot validation: passed on 2026-06-12.
 - Backend 1 test location: `/mnt/data/Test Server/`.
-- Stage 1 Wolds filter necklace behavior fix: not implemented.
+- Stage 1 Wolds filter necklace behavior fix: not implemented; now classified as low-risk cleanup rather than the primary next TPS fix for the latest workload.
 - Stage 2 hammer-adjacent behavior fixes: not implemented.
 - Stage 3 virtual-world behavior fixes: not implemented.
 - Wolds jar changes: not started.
@@ -32,38 +39,113 @@ Backend 1 boot validation result:
 6. Server shutdown saved all dimensions.
 7. No MasuCraftFixes, Stage 0, or optional Wolds telemetry mixin crash appeared in `logs/latest.log`.
 
+Latest Stage 0 live validation result:
+
+1. `logs/masucraftfixes-stage0.log` captured 77 summaries inside the Spark window from `2026-06-13T11:29:57Z` through `2026-06-13T12:11:37Z`.
+2. Final Stage 0 counters, reset shortly before the profile: `304761` vault pickup events, `300782` canceled pickups, `122706` removed item entities, `201164` vault block-break events, `10147` canceled block-break events, and `577` max block-break events for one player in one tick.
+3. Wolds filter matching was active: `180793` handler calls, `91022` `stackMatchesFilter` calls, and `91022` `getInventory` calls. Average timings were low: handler `0.022 ms`, `stackMatchesFilter` `0.033 ms`, and `getInventory` `0.002 ms`.
+4. Virtual-world sampling captured `462` samples, with max per-world tick time `230.007 ms`, max item entities `262`, max hostile mobs `851`, and max loaded chunks `56155`.
+5. `logs/masucraftfixes-vaultsync.log` stayed stable for the same Spark window: delta `FULL=17034`, `HUD_DIFF=323567`, about `5.001%` full and `94.999%` HUD diff.
+6. Server log correlation found `13767` `WorldGenRegion` block-entity-before-created warnings, `2292` duplicate entity UUID warnings, `116` keep-up or Waterframes overload warnings, and `61` Vault `Placing ERROR Block` lines during the Spark window.
+7. The exact-thread Spark analysis confirms the main issue is not telemetry overhead: virtual-world worker waits, player tick, Curios/NBT equality, mapped generation/entity pressure, and hammer/block-action bursts are the actionable areas.
+
 Next required validation:
 
-1. Run with diagnostics enabled during one controlled mapped vault.
-2. Confirm `logs/masucraftfixes-stage0.log` receives `stage0_summary` lines.
-3. Confirm diagnostic overhead is not visible in Spark.
-4. Confirm VaultSync packet mix remains stable.
+1. Investigate the duplicate entity UUID and `WorldGenRegion` generation warnings, especially vaults `4e51ad50-f0d4-4c15-90f1-e12475bf7ca0` and `46f599ca-0c93-4759-83b6-aac8f41aa580`.
+2. Refine virtual-world telemetry by vault id, entity type, chunk count, and warning correlation if the next fix needs more attribution.
+3. Investigate the Curios/player equipment NBT equality cost under `ServerPlayer.tick`.
+4. Keep VaultSync telemetry enabled for confirmation, but do not change VaultSync policy unless a new profile implicates it.
 
 ## Summary Verdict
 
-VaultSync is not the main remaining TPS problem in the captured profile.
+VaultSync is not the main remaining TPS problem in the latest captured profile.
 
-The VaultSync mitigation is working:
+The latest capture, `Y280i8UbT7`, is degraded but not as severe as the older 8-10 TPS profile:
 
-- Parsed packet rows: `16660`
-- `HUD_DIFF`: `15818`, or `94.95%`
-- `FULL`: `842`, or `5.05%`
-- `HUD_DIFF` median payload: `424 bytes`
-- `HUD_DIFF` median build time: `0.043 ms`
-- `FULL` median payload: `583904 bytes`
-- `FULL` median build time: `7.440 ms`
-- Only two `>20 ms` sync builds were found, both periodic full baselines in the 5-player vault.
-- No VaultSync errors, warnings, disabled-state lines, LuckPerms anomalies, or exceptions were found in the VaultSync log.
+- Average TPS: `18.25`.
+- Worst TPS window: `9.80 TPS`, `85.98 ms` median MSPT, `598.72 ms` max MSPT.
+- Worst spike: `1842.49 ms` max MSPT.
+- Process CPU stayed around `28-34%`, and G1 old collections remained `0`, so this is not full-machine saturation or old-gen GC collapse.
 
-The remaining low TPS is best explained by active mapped-vault gameplay load:
+The remaining low TPS is best explained by mapped-vault load:
 
-- Root Cause 1: Hammer mining fanout.
-- Root Cause 2: Item pickup event pipeline.
-- Root Cause 3: Vault virtual-world worker completion waits.
+- Root Cause 1: Vault virtual-world worker completion waits and worker-side vault entity/chunk ticking.
+- Root Cause 2: Player tick cost, including Curios/player equipment NBT equality.
+- Root Cause 3: Mapped-vault generation/spawn anomalies, shown by duplicate entity UUID and `WorldGenRegion` warning volume.
+- Root Cause 4: Hammer mining and pickup/event fanout remain active load multipliers, but were not the top sampled offender in this latest profile.
+
+The Wolds filter necklace path was active in the latest run and has a likely cache opportunity, but Spark ranks it low: `Wolds PlayerEvents.onFilterNecklaceUse` was `2.5 ms`, `0.2%` of sampled server-thread time. Stage 1 remains reasonable cleanup, not the primary next TPS fix.
 
 Important constraint: hammers are supported Vault Hunters gameplay. The plan does not disable or cap hammers. It reduces multiplied work around hammers.
 
-## Evidence Summary
+## Latest Evidence Summary: Y280i8UbT7
+
+Profile window:
+
+- Started: `2026-06-13 13:29:54` Europe/Amsterdam
+- Ended: `2026-06-13 14:11:56` Europe/Amsterdam
+- Duration: `2522.2 s`
+- Ticks: `46042`
+- Average TPS: `18.25`
+- Minecraft/Forge: `1.18.2` / Forge `40.3.11`
+- Spark: `1.10.38`
+- Sampler mode: `EXECUTION`
+- Interval: `4000 us`
+
+System health:
+
+- Process CPU: about `28-34%`
+- Heap used at capture end: about `15496 MB`
+- G1 old collections: `0`
+- Estimated total GC pause: about `23.7 s` over `2522.2 s`, about `0.94%` of wall time.
+- This does not look like full-machine CPU saturation or old-gen GC collapse.
+
+Worst Spark windows:
+
+- Window `29689200`: `9.80 TPS`, `85.98 ms` median MSPT, `598.72 ms` max MSPT, `817` entities, `54926` chunks.
+- Window `29689199`: `11.02 TPS`, `74.34 ms` median MSPT, `203.89 ms` max MSPT, `1004` entities, `58102` chunks.
+- Window `29689188`: `18.17 TPS` but `1842.49 ms` max MSPT, `787` entities, `55864` chunks.
+- Window `29689196`: max chunk count at `58458` chunks.
+
+Exact `Server thread` findings:
+
+- Main tick root: `MinecraftServer.m_5705_`, `1289.7 ms`, `83.3%`.
+- Vault virtual-world wait: `VirtualWorlds.tick -> ThreadPool.awaitCompletion -> IntLatch.waitUntil -> Object.wait`, `436.2 ms`, `28.2%`.
+- Player tick under connection tick: `ServerConnectionListener -> ServerGamePacketListenerImpl.m_9933_ -> ServerPlayer.tick`, `408.8 ms`, `26.4%`.
+- Curios tick: `71.6 ms`, `4.6%`.
+- Player equipment/NBT equality: `ItemStack.m_41728_ -> ItemStack.m_41744_ -> CompoundTag.equals`, `48.0 ms`, `3.1%`.
+- Vault post-server-tick sync construction: vanilla/full `VaultMessage.Sync.<init>` `27.9 ms`, `1.8%`; MasuCraftFixes diff path `8.6 ms`, `0.6%`.
+- Vault card/task post-tick work: `ActiveCardTaskHelper.onServerTick -> CardDeck.readNbt` `26.1 ms`, `1.7%`; `DeckRecipeTaskData.onServerTick` `22.5 ms`, `1.5%`.
+- Hammer/block action path: `ServerboundPlayerActionPacket -> ServerPlayerGameMode.handleBlockBreakAction`, `63.9 ms`, `4.1%`.
+
+Exact Vault virtual-world worker findings:
+
+- Worker pool: `pool-24-thread (x10)`.
+- Most worker samples are idle waiting for work, but active work is real vault ticking.
+- `VirtualWorlds.tickWorld -> ServerLevel.tick`: `888.6 ms`, `5.8%` of the worker group.
+- Entity ticking: `EntityTickList.m_156910_`, `614.8 ms`, `4.0%`; entity tick path `569.9 ms`, `3.7%`.
+- `Mob.tick`: `226.9 ms`, `1.5%`.
+- `Zombie.tick`: `103.3 ms`, `0.7%`.
+- Chunk ticking/loading paths: `ServerChunkCache.m_201698_` `182.4 ms`, `1.2%`; `ServerChunkCache.m_8490_` `156.1 ms`, `1.0%`.
+
+Stage 0 and log correlation:
+
+- Stage 0 summaries inside Spark window: `77`.
+- Vault pickups: `304761`; canceled pickups: `300782`; removed item entities: `122706`.
+- Vault block breaks: `201164`; canceled block breaks: `10147`; max per-player block-break burst: `577`.
+- Wolds filter handler calls: `180793`; `stackMatchesFilter`: `91022`; `getInventory`: `91022`.
+- Virtual-world samples: `462`; max sampled world tick: `230.007 ms`; max hostile mobs: `851`; max item entities: `262`; max loaded chunks: `56155`.
+- Server log warnings during Spark window: `13767` `WorldGenRegion` block-entity-before-created warnings, `2292` duplicate entity UUID warnings, `61` Vault `Placing ERROR Block` lines.
+
+VaultSync evidence in latest run:
+
+- FULL delta: `17034`.
+- HUD_DIFF delta: `323567`.
+- FULL share: `5.001%`.
+- HUD_DIFF share: `94.999%`.
+- Slow packet outliers exist, including builds over `100 ms`, but the aggregate packet mix remains correct and VaultSync is not the dominant sampled cost.
+
+## Previous Bad Profile Evidence Summary: yTZhEvScpw
 
 Profile window:
 
@@ -150,7 +232,7 @@ Persistence behavior:
 
 Regression guard:
 
-- Do not modify VaultSync while fixing Root Cause 1, Root Cause 2, or Root Cause 3.
+- Do not modify VaultSync while fixing mapped-vault generation/entity pressure, player/Curios tick cost, Wolds filter cleanup, or hammer-adjacent work.
 - Keep VaultSync telemetry available to confirm that no change reintroduces full-sync spam.
 - Expected post-fix VaultSync shape should remain mostly `HUD_DIFF`, with full syncs limited to first sync, periodic refresh, modifier count changes, and finish handling.
 
@@ -195,9 +277,9 @@ Validation:
 - Backend 1 boot test passed: the test server from `/mnt/data/Test Server/Backend 1` reached `Done (12.078s)!` with the new MasuCraftFixes jar.
 - `/masucraftstage0 status` returned disabled-by-default counters and confirmed command registration.
 - Shutdown saved all dimensions cleanly.
-- Run with diagnostics enabled during one controlled mapped vault.
-- Confirm diagnostic overhead is not visible in Spark.
-- Confirm VaultSync packet mix remains stable.
+- Downloaded live logs confirm diagnostics ran during mapped-vault load and wrote `stage0_summary` lines.
+- The `Y280i8UbT7` Spark capture did not implicate Stage 0 telemetry as a visible hotspot.
+- Downloaded VaultSync logs confirm the packet mix remained stable during the Stage 0 and Spark run.
 - Confirm Stage 0 can be deployed by updating only the MasuCraftFixes jar.
 
 Implemented files:
@@ -242,6 +324,13 @@ Completed validation:
 
 - `./gradlew build` passed.
 - The built jar contains the Stage 0 telemetry classes and Wolds optional telemetry mixins.
+- The downloaded Stage 0 log contains periodic summaries under live load.
+- The downloaded VaultSync log stayed at about `95%` HUD diff and `5%` full sync for the Stage 0 run, with no errors or LuckPerms anomalies.
+
+Validation gaps:
+
+- Stage 0 telemetry confirms active Wolds filter matching, hammer/block-break bursts, and virtual-world sampling, but it still needs more per-vault attribution for the generation/entity warnings.
+- Existing virtual-world samples are aggregate enough to prove load, not precise enough to identify the exact vault worker entity or generation source.
 
 Regression risks:
 
@@ -249,11 +338,17 @@ Regression risks:
 - World/entity telemetry can touch hot paths. Keep reads cheap and sampled.
 - Timing mixins into Wolds methods can break on Wolds updates. Keep them isolated, optional, and telemetry-only.
 
-## Stage 1: Fix Root Cause 2, Wolds Filter Necklace
+## Stage 1: Wolds Filter Necklace Cleanup
 
 Status: pending. Stage 0 telemetry for Wolds filter necklace timing is implemented in MasuCraftFixes, but the Wolds behavior/cache fix itself is not implemented.
 
-This is the lowest-risk first fix because the measured hotspot is Wolds-owned and local to one feature.
+Latest Stage 0 note:
+
+- The latest live Stage 0 run captured `180793` Wolds filter handler invocations, `91022` `stackMatchesFilter` calls, and `91022` `getInventory` calls.
+- The cache opportunity is real because necklace hashes repeated heavily, but Spark ranked the Wolds handler at only `2.5 ms`, `0.2%` of sampled server-thread time.
+- Stage 1 remains low-risk cleanup, especially moving the vault-world check before Curios lookup, but it should not be treated as the primary next TPS fix for the latest workload.
+
+This was the lowest-risk first fix from the older severe profile because the measured hotspot was Wolds-owned and local to one feature. The latest Spark capture demotes it behind mapped-vault generation/entity pressure and player/Curios NBT equality.
 
 Current Wolds path:
 
@@ -338,9 +433,15 @@ Regression risks:
 - Event interaction could change if priority changes. Mitigation: do not change priority.
 - Client menu could produce unexpected NBT shape. Mitigation: keep existing `getInventory` and `saveToStack` behavior.
 
-## Stage 2: Fix Root Cause 1, Hammer Mining Fanout
+## Stage 2: Hammer Mining Fanout
 
 Status: pending. Stage 0 block-break and per-player/tick burst telemetry is implemented; hammer-adjacent behavior fixes are not implemented.
+
+Latest Stage 0 note:
+
+- The latest live Stage 0 run ended at `201164` vault block-break events, `10147` canceled block-break events, and a max per-player/tick burst of `577`.
+- Top block-break contributors in the final summary were `5hekel@4e51ad50-f0d4-4c15-90f1-e12475bf7ca0=46058`, `Purplish2307@46f599ca-0c93-4759-83b6-aac8f41aa580=34966`, and `Mimo_sm@4e51ad50-f0d4-4c15-90f1-e12475bf7ca0=31368`.
+- This supports hammer/mining fanout as an active live workload, but direct Spark server-thread sample share was lower than the older severe profile: `ServerboundPlayerActionPacket` was `63.9 ms`, `4.1%`.
 
 Do not nerf or disable hammers.
 
@@ -434,9 +535,17 @@ Regression risks:
 - Coalescing drops can affect ownership, pickup delay, quests, or pickup order.
 - Changing hammer geometry can desync client highlight from server behavior.
 
-## Stage 3: Fix Root Cause 3, Virtual World Worker Completion
+## Stage 3: Virtual World Worker Completion
 
 Status: pending. Stage 0 read-only virtual-world sampling is implemented; no virtual-world behavior or threading changes have been made.
+
+Latest Stage 0 note:
+
+- The latest live Stage 0 run captured `462` virtual-world samples.
+- The maximum observed world tick sample was `230.007 ms`.
+- The run reached `851` hostile mobs, `262` item entities, and `56155` loaded chunks across sampled vault worlds.
+- Exact-thread Spark analysis confirms worker-thread attribution: `VirtualWorlds.tickWorld -> ServerLevel.tick` was `888.6 ms`, `5.8%` of the `pool-24-thread (x10)` worker group, with `EntityTickList` at `614.8 ms`, `4.0%`.
+- The next useful work is not another generic Spark capture; it is more specific attribution by vault id, entity type, chunk count, and generation/log warning correlation.
 
 Do not patch `IntLatch.waitUntil`, `ThreadPool.awaitCompletion`, or the virtual-world wait directly.
 
@@ -492,9 +601,9 @@ Relevant Wolds files:
 
 Proposed low-risk sequence:
 
-1. Add read-only per-vault-world telemetry.
-2. Correlate long waits with item entities, mobs, chunks, generation, and active players.
-3. Let Stage 1 and Stage 2 reduce item pressure before changing virtual-world behavior.
+1. Investigate duplicate entity UUID warnings and `WorldGenRegion` block-entity-before-created warnings first.
+2. Add or refine read-only per-vault-world telemetry only where the warning investigation needs more live attribution.
+3. Correlate long waits with vault id, entity type, item entities, mobs, chunks, generation, active players, and warning volume.
 4. If generation is the issue, prefer Wolds-side map/layout safeguards or operational limits.
 5. If mobs are the issue, do not immediately throttle AI because that changes vault difficulty.
 
@@ -573,14 +682,14 @@ VaultSync:
 - No VaultSync errors or disabled-state lines appear.
 - No client HUD regressions are reported.
 
-Root Cause 2:
+Wolds filter cleanup:
 
 - Wolds filter necklace behavior is unchanged from the player's perspective.
 - Cache hit rate is high in repeated pickup scenarios.
 - `VFTests.checkFilter` call count is materially lower.
 - Wolds filter necklace sample share drops in Spark.
 
-Root Cause 1:
+Hammer fanout:
 
 - Hammers remain fully supported.
 - Same blocks break or are blocked as before.
@@ -588,7 +697,7 @@ Root Cause 1:
 - Mining tasks/objectives still count.
 - Pickup and item entity pressure decreases.
 
-Root Cause 3:
+Virtual-world and mapped-generation work:
 
 - `IntLatch.waitUntil` only decreases if worker duration decreases.
 - Per-vault-world telemetry explains the remaining waits.
@@ -601,13 +710,14 @@ Root Cause 3:
 2. Completed: build the MasuCraftFixes jar with Stage 0 telemetry.
 3. Completed: deploy Stage 0 by updating only the MasuCraftFixes jar on Backend server 1 under `/mnt/data/Test Server/`.
 4. Completed: boot Backend server 1 and verify there are no MasuCraftFixes, Stage 0, or Wolds optional telemetry mixin regressions.
-5. Pending: re-profile the same mapped vault scenarios and confirm whether Wolds filter necklace, hammer fanout, or virtual-world worker duration is the highest-value next fix.
-6. Pending: when a Wolds jar update is available, implement Wolds filter necklace cache and cheap short-circuits.
-7. Pending: re-profile mapped vault hammer/loot behavior.
-8. Pending: decide whether hammer-adjacent item entity reduction is still needed.
-9. Pending: add or refine virtual-world read-only telemetry if Stage 0 did not explain worker waits.
-10. Pending: decide whether Wolds map/layout warnings or caps are needed.
-11. Pending: only after evidence, consider guarded item entity coalescing or narrowly scoped VH compatibility micro-optimizations.
+5. Completed: profile the mapped-vault workload with all relevant logs and write `/home/masuary/Downloads/Logs/Y280i8UbT7-report.md`.
+6. Pending: investigate duplicate entity UUID warnings and `WorldGenRegion` block-entity-before-created warnings in mapped-vault generation/spawn paths.
+7. Pending: refine virtual-world read-only telemetry by vault id, entity type, chunk count, and warning correlation if the warning investigation needs more live attribution.
+8. Pending: investigate Curios/player equipment NBT equality cost during `ServerPlayer.tick`.
+9. Pending: keep VaultSync unchanged except for monitoring; only revisit if a new profile implicates it.
+10. Pending: implement Wolds filter necklace cache and cheap short-circuits as low-risk cleanup when a Wolds jar update is available.
+11. Pending: decide whether hammer-adjacent item entity reduction is still needed after generation/entity and player-tick findings are addressed.
+12. Pending: only after evidence, consider guarded item entity coalescing or narrowly scoped VH compatibility micro-optimizations.
 
 ## Explicit Non-Goals
 
