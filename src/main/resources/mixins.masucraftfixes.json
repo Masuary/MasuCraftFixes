@@ -15,11 +15,7 @@
     "CasinoCraftMessageStartServerHandlerMixin",
     "CasinoCraftMessageStateServerHandlerMixin",
     "FTBCheatCommandsMixin",
-    "ServerPlayerMixin",
-    "VaultListenerSyncReplaceMixin",
-    "VaultMessageSyncTelemetryMixin",
-    "WoldsFilterNecklaceItemTelemetryMixin",
-    "WoldsPlayerEventsTelemetryMixin"
+    "ServerPlayerMixin"
   ],
   "injectors": {
     "maxShiftBy": 10,
