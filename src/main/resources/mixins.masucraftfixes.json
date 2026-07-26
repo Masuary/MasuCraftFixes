@@ -6,7 +6,6 @@
   "mixins": [
     "AngelExpertiseMixin",
     "CommandBlockEditMixin",
-    "CompressMessageMixin",
     "FTBCheatCommandsMixin",
     "IskalliaDevsMixin",
     "ModifyCrystalSuggestionsMixin",

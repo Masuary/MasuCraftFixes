@@ -2,6 +2,18 @@
 
 ## Completed
 
+### Vault 20.0.3 Crafting Tweaks Compatibility (2026-07-26, v1.5.1)
+**Problem:** Vault Hunters build 6872 added `MixinCraftingTweaksCompress`, which implements the same Crafting Tweaks dupe fix as `CompressMessageMixin`. Both mixins redirect the same `ItemStack.shrink(int)` call. Vault's strict injection therefore fails during startup after the MasuCraftFixes redirect applies first.
+
+**Solution:** Removed `CompressMessageMixin` and the now-unused Crafting Tweaks build and runtime dependencies. Vault Hunters owns the dupe fix in 20.0.3 and later.
+
+**Files:**
+- `src/main/java/com/masuary/masucraftfixes/mixin/CompressMessageMixin.java` (removed)
+- `deps/craftingtweaks-forge-1.18.2-14.0.9.jar` (removed)
+- `build.gradle` (removed dependency, version bumped 1.5.0 -> 1.5.1)
+- `mixins.masucraftfixes.json` (removed mixin registration)
+- `META-INF/mods.toml` (removed mandatory `craftingtweaks` dependency)
+
 ### Angel Expertise Flight Fix (2026-03-28)
 **Problem:** AngelExpertise.onTick() strips FTB `/fly` flight every tick when player isn't near an Angel Block, applying Slow Falling instead.
 
@@ -28,4 +40,4 @@
 - `mixins.masucraftfixes.json` (registered mixin)
 - `META-INF/mods.toml` (added mandatory `craftingtweaks` dependency, `versionRange="[14.0.9,)"`)
 
-**Coexistence note:** If a future VH update bundles a fixed Crafting Tweaks or adds its own Mixin on the same method, watch the server log on first boot. Our injections are strict (`defaultRequire = 1`); if VH's version restructures `compressMouseSlot` so the `INVOKE shrink` site disappears, Mixin will throw a critical injection failure at startup. If that happens: remove `"CompressMessageMixin"` from `mixins.masucraftfixes.json` and rebuild. If their fix coexists with our targets, the mixin runs redundantly with no behavioral change.
+**Retired in v1.5.1:** Vault Hunters 20.0.3 build 6872 added its own strict redirect for the same fix. The MasuCraftFixes mixin and Crafting Tweaks dependency were removed to avoid a startup injection conflict.

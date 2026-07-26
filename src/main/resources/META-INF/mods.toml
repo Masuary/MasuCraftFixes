@@ -24,10 +24,3 @@ Server-side fixes for Vault Hunters: Pickarang item tag filtering, LuckPerms pla
     versionRange="[1.18.2,1.19)"
     ordering="NONE"
     side="BOTH"
-
-[[dependencies.masucraftfixes]]
-    modId="craftingtweaks"
-    mandatory=true
-    versionRange="[14.0.9,)"
-    ordering="AFTER"
-    side="BOTH"
