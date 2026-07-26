@@ -2,6 +2,8 @@ package com.masuary.masucraftfixes;
 
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
@@ -14,6 +16,7 @@ public class MasuCraftFixes {
     public static final Logger LOGGER = LogManager.getLogger();
 
     public MasuCraftFixes() {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, MasuCraftFixesConfig.SPEC);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         LOGGER.info("MasuCraftFixes initialized");
@@ -21,5 +24,6 @@ public class MasuCraftFixes {
 
     private void setup(final FMLCommonSetupEvent event) {
         MixinBootstrap.init();
+        event.enqueueWork(VaultV166Compatibility::installIfConfigured);
     }
 }

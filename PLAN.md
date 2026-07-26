@@ -2,6 +2,49 @@
 
 ## Completed
 
+### Vault Build 6574 v1_66 Data Compatibility (2026-07-26, v1.6.0)
+**Problem:** Vault Hunters build 6872 reuses the v1_66 schema version after changing
+several versioned field registries. Worlds upgraded directly from build 6574 cannot
+load `the_vault_Vaults.dat` or historical Vault snapshots because their v1_66 bit
+streams are decoded with the new registry shape.
+
+**Solution:** Added an exact-build migration profile for The Vault
+`1.18.2-20.0.3-remastered.6872`. Before normal world loading, it temporarily
+restores the build 6574 v1_66 definitions, atomically rewrites active Vault
+records and historical snapshots as v1_67, verifies each replacement, and then
+restores build 6872's native schema in the same process. Every changed original
+is byte-verified under `world/data/masucraftfixes-v166-backup`, and a completion
+marker is written to `world/data/masucraftfixes-v166-to-v167.properties`.
+
+The profile is enabled by default for MasuCraft's controlled build 6574 to build
+6872 rollout and ignored on every other Vault build. Once conversion succeeds,
+the world contains standard v1_67 files and no longer depends on the temporary
+reader. Disable it for a server from another source build with
+`vaultDataCompatibility.enableLegacy6574V166Compatibility=false` in
+`config/masucraftfixes-common.toml`.
+
+**Validation:**
+- Clean compile and build passed.
+- A copy of the restored production world migrated all 18 active Vault records
+  and all 8,220 historical snapshot files.
+- The complete 244 MiB backup matched the pre-migration originals, including all
+  8,220 snapshot files.
+- Vault's native snapshot audit loaded all 8,220 references with zero corrupted
+  snapshots after the temporary schema reader was removed.
+- A cold restart with the compatibility setting disabled loaded the converted
+  world successfully without the original saved-data error.
+- The original production world was not modified during validation.
+
+**Files:**
+- `src/main/java/com/masuary/masucraftfixes/MasuCraftFixesConfig.java` (new)
+- `src/main/java/com/masuary/masucraftfixes/MasuCraftFixesMixinPlugin.java` (new)
+- `src/main/java/com/masuary/masucraftfixes/VaultV166Compatibility.java` (new)
+- `src/main/java/com/masuary/masucraftfixes/VaultV166DiskMigration.java` (new)
+- `src/main/java/com/masuary/masucraftfixes/mixin/VaultSnapshotV166CompatibilityMixin.java` (new)
+- `build.gradle` (Vault dependency updated, version bumped 1.5.1 -> 1.6.0)
+- `mixins.masucraftfixes.json` (registered exact-build mixin plugin and compatibility mixins)
+- `META-INF/mods.toml` (updated description)
+
 ### Vault 20.0.3 Crafting Tweaks Compatibility (2026-07-26, v1.5.1)
 **Problem:** Vault Hunters build 6872 added `MixinCraftingTweaksCompress`, which implements the same Crafting Tweaks dupe fix as `CompressMessageMixin`. Both mixins redirect the same `ItemStack.shrink(int)` call. Vault's strict injection therefore fails during startup after the MasuCraftFixes redirect applies first.
 
