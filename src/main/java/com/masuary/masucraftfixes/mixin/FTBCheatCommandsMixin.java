@@ -1,5 +1,6 @@
 package com.masuary.masucraftfixes.mixin;
 
+import com.masuary.masucraftfixes.FtbEssentialsFlightCompatibility;
 import dev.ftb.mods.ftbessentials.command.CheatCommands;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
@@ -15,8 +16,7 @@ public class FTBCheatCommandsMixin {
     private static void blockFlyInVault(ServerPlayer player, CallbackInfoReturnable<Integer> cir) {
         if (player.hasPermissions(4)) return;
 
-        String dimension = player.level.dimension().location().toString();
-        if (dimension.toLowerCase().contains("the_vault:vault")) {
+        if (FtbEssentialsFlightCompatibility.isVaultDimension(player)) {
             player.displayClientMessage(new TextComponent("Flight in the Vaults is not allowed!"), true);
             cir.setReturnValue(1);
         }

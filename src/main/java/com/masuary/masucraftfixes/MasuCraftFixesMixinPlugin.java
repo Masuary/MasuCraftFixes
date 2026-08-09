@@ -8,6 +8,11 @@ import java.util.List;
 import java.util.Set;
 
 public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
+    private static final Set<String> FTB_ESSENTIALS_MIXINS = Set.of(
+            "com.masuary.masucraftfixes.mixin.AngelExpertiseMixin",
+            "com.masuary.masucraftfixes.mixin.FTBCheatCommandsMixin",
+            "com.masuary.masucraftfixes.mixin.ServerPlayerMixin"
+    );
     private static final Set<String> CASINOCRAFT_MIXINS = Set.of(
             "com.masuary.masucraftfixes.mixin.CasinoCraftBlockEntityMachineMixin",
             "com.masuary.masucraftfixes.mixin.CasinoCraftMenuProviderMixin",
@@ -30,6 +35,10 @@ public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (FTB_ESSENTIALS_MIXINS.contains(mixinClassName)) {
+            return isModLoaded("ftbessentials");
+        }
+
         if (CASINOCRAFT_MIXINS.contains(mixinClassName)) {
             return isModLoaded("casinocraft");
         }

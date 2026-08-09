@@ -1,5 +1,6 @@
 package com.masuary.masucraftfixes.mixin;
 
+import com.masuary.masucraftfixes.FtbEssentialsFlightCompatibility;
 import dev.ftb.mods.ftbessentials.util.FTBEPlayerData;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,8 +21,7 @@ public abstract class ServerPlayerMixin {
         if (player.isDeadOrDying()) return;
         if (player.hasPermissions(4)) return;
 
-        String dimension = player.level.dimension().location().toString();
-        if (!dimension.toLowerCase().contains("the_vault:vault")) return;
+        if (!FtbEssentialsFlightCompatibility.isVaultDimension(player)) return;
 
         FTBEPlayerData data = FTBEPlayerData.get(player);
         Abilities abilities = player.getAbilities();

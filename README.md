@@ -28,7 +28,7 @@ masucraftfixes-wolds
 
 - Vessel anti-AFK safeguards.
 - LuckPerms player-limit bypass tag.
-- Vault flight prevention for FTB Essentials flight.
+- FTB Essentials `/fly` compatibility with Angel Blocks, while retaining the vault flight restriction.
 - Optional CasinoCraft mixins, only applied when CasinoCraft is loaded.
 
 ## Other Commands
@@ -52,7 +52,7 @@ Local JARs are expected in `deps/`.
 Important compile targets:
 
 - Forge `1.18.2-40.3.11`
-- The Vault `1.18.2-3.21.5.6573`
+- The Vault `1.18.2-3.21.6.6884`
 - LuckPerms API
 - FTB Essentials
 - Crafting Tweaks

@@ -1,6 +1,6 @@
 package com.masuary.masucraftfixes.mixin;
 
-import dev.ftb.mods.ftbessentials.util.FTBEPlayerData;
+import com.masuary.masucraftfixes.FtbEssentialsFlightCompatibility;
 import iskallia.vault.skill.base.SkillContext;
 import iskallia.vault.skill.expertise.type.AngelExpertise;
 import java.util.Optional;
@@ -16,11 +16,9 @@ public class AngelExpertiseMixin {
     @Inject(method = "onTick", at = @At("HEAD"), cancellable = true)
     private void skipOnTickWhenFtbFlyActive(SkillContext context, CallbackInfo ci) {
         Optional<ServerPlayer> playerOptional = context.getSource().as(ServerPlayer.class);
-        if (playerOptional.isPresent()) {
-            FTBEPlayerData data = FTBEPlayerData.get(playerOptional.get());
-            if (data != null && data.fly) {
-                ci.cancel();
-            }
+        if (playerOptional.isPresent()
+                && FtbEssentialsFlightCompatibility.shouldPreserveFlightFromAngelExpertise(playerOptional.get())) {
+            ci.cancel();
         }
     }
 }

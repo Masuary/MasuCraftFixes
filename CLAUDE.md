@@ -31,9 +31,11 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 
 | Mixin | Target | Purpose |
 |---|---|---|
-| `AngelExpertiseMixin` | `AngelExpertise` (The Vault) | Prevents angel expertise from stripping FTB `/fly` flight |
+| `AngelExpertiseMixin` | `AngelExpertise` (The Vault) | Prevents angel expertise from stripping FTB `/fly` flight outside vaults while preserving the operator bypass |
 | `FTBCheatCommandsMixin` | `CheatCommands` (FTB Essentials) | Blocks `/fly` inside vault dimensions |
 | `ServerPlayerMixin` | `ServerPlayer` | Disables active FTB flight inside vault dimensions each tick |
+
+The three FTB Essentials flight mixins are applied only when `ftbessentials` is loaded. They use FTB's persisted `fly` flag as the flight-ownership signal and leave other flight providers to their own compatibility logic.
 
 ## LuckPerms Permissions
 
@@ -45,7 +47,7 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 
 Local JARs in `deps/`:
 - `luckperms-forge.jar` - LuckPerms Forge API
-- `the_vault-1.18.2-3.21.5.6573.jar` - The Vault mod (mixin targets)
+- `the_vault-1.18.2-3.21.6.6884.jar` - The Vault mod (mixin targets)
 
 Remote (via CurseMaven):
 - FTB Essentials, Quark, AutoRegLib, LuckPerms
