@@ -32,9 +32,14 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 | Mixin | Target | Purpose |
 |---|---|---|
 | `AngelExpertiseMixin` | `AngelExpertise` (The Vault) | Prevents angel expertise from stripping FTB `/fly` flight outside vaults while preserving the operator bypass |
+| `ArrayAdapterMigrationSafetyMixin` | `ArrayAdapter` (The Vault) | Bounds object-array allocation while legacy snapshots are being migrated |
+| `ByteArrayAdapterMigrationSafetyMixin` | `ByteArrayAdapter` (The Vault) | Bounds byte-array allocation while legacy snapshots are being migrated |
 | `FTBCheatCommandsMixin` | `CheatCommands` (FTB Essentials) | Blocks `/fly` inside vault dimensions |
+| `IntArrayAdapterMigrationSafetyMixin` | `IntArrayAdapter` (The Vault) | Bounds integer-array allocation while legacy snapshots are being migrated |
+| `LongArrayAdapterMigrationSafetyMixin` | `LongArrayAdapter` (The Vault) | Bounds long-array allocation while legacy snapshots are being migrated |
 | `ServerPlayerMixin` | `ServerPlayer` | Disables active FTB flight inside vault dimensions each tick |
-| `VaultSnapshotV166CompatibilityMixin` | `VaultSnapshot` (The Vault) | Decodes build 6573 snapshots during the one-time v1_67 disk migration |
+| `VaultSnapshotV166CompatibilityMixin` | `VaultSnapshot` (The Vault) | Promotes fully decoded legacy snapshots during the one-time v1_67 disk migration |
+| `WoldsFloatListAdapterMigrationSafetyMixin` | `ElixirBreakpointMap.FloatListAdapter` (Wolds Vaults) | Bounds elixir float-list allocation while legacy snapshots are being migrated |
 
 The three FTB Essentials flight mixins are applied only when `ftbessentials` is loaded. They use FTB's persisted `fly` flag as the flight-ownership signal and leave other flight providers to their own compatibility logic.
 
@@ -46,14 +51,31 @@ under `world/data/masucraftfixes-v166-backup`, and completion is recorded in
 `world/data/masucraftfixes-v166-to-v167.properties`. After conversion, the
 native v1_67 schema is restored before Vault loads the world normally. Wolds
 contains snapshots from multiple schema generations that share the v1_66
-version number, so only IDs already present in Vault's persisted corruption
-quarantine are passed through the build 6573 reader. Native-compatible v1_66
-snapshot files remain unchanged. Successfully migrated IDs are removed from the
-quarantine, while files that still cannot be decoded remain preserved and
-quarantined. Unexpected NBT, backup, write, and verification failures still
-stop startup. Vault's `the_vault_VaultSnapshots.dat` manifest and segmented
-snapshot files use uncompressed NBT, unlike standard compressed Forge
-`SavedData` files.
+version number, so IDs already present in Vault's persisted corruption
+quarantine and IDs referenced by a renamed
+`the_vault_VaultSnapshots.dat.old` manifest are tested against the build 6573,
+transitional late-v1_66, expanded add-on, and native build 6884 layouts. Old
+references are prepended to the regenerated manifest while every current
+reference remains authoritative later in the list. Recovery temporarily restores
+historical Wolds objective suppliers and Unobtainium barrel/chest statistic
+fields that newer add-on builds removed, plus v1_67-only fields registered by
+server add-ons in the affected nested Vault data types. Each successful
+candidate must consume the complete source bit stream, be normalized through
+the native v1_67 registries, produce an unambiguous result, and reach a stable
+native v1_67 decode/re-encode fixed point before its original is backed up and
+atomically replaced.
+
+Native-compatible, unreferenced v1_66 snapshot files remain unchanged.
+Successfully migrated IDs are removed from quarantine, while referenced files
+that cannot be decoded, are missing, or have ambiguous results remain preserved
+and quarantined. Migration-only bounds on Vault primitive/object arrays and the
+Wolds elixir float-list adapter prevent malformed schema candidates from
+exhausting the heap without changing normal runtime decoding. Marker format 6
+makes servers that ran an earlier migration import and recover the old manifest
+once, then makes later boots idempotent. Unexpected NBT,
+backup, write, and verification failures still stop startup. Vault's
+`the_vault_VaultSnapshots.dat` manifest and segmented snapshot files use
+uncompressed NBT, unlike standard compressed Forge `SavedData` files.
 
 ## LuckPerms Permissions
 
