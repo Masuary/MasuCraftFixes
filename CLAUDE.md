@@ -15,7 +15,7 @@ Output JAR: `build/libs/masucraftfixes-wolds-<version>.jar`.
 
 ## Package Structure
 
-- `com.masuary.masucraftfixes` - main mod class, event handler, LuckPerms integration, Vessel anti-AFK
+- `com.masuary.masucraftfixes` - main mod class, configuration, Vault compatibility, event handler, LuckPerms integration, Vessel anti-AFK
 - `com.masuary.masucraftfixes.mixin` - all mixins
 
 ## Event Handlers
@@ -34,8 +34,26 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 | `AngelExpertiseMixin` | `AngelExpertise` (The Vault) | Prevents angel expertise from stripping FTB `/fly` flight outside vaults while preserving the operator bypass |
 | `FTBCheatCommandsMixin` | `CheatCommands` (FTB Essentials) | Blocks `/fly` inside vault dimensions |
 | `ServerPlayerMixin` | `ServerPlayer` | Disables active FTB flight inside vault dimensions each tick |
+| `VaultSnapshotV166CompatibilityMixin` | `VaultSnapshot` (The Vault) | Decodes build 6573 snapshots during the one-time v1_67 disk migration |
 
 The three FTB Essentials flight mixins are applied only when `ftbessentials` is loaded. They use FTB's persisted `fly` flag as the flight-ownership signal and leave other flight providers to their own compatibility logic.
+
+The v1_66 compatibility reader is restricted to The Vault
+`1.18.2-3.21.6.6884`. Before normal world loading, MasuCraftFixes atomically
+converts active Vault records and historical snapshots from build 6573's
+ambiguous v1_66 schema to the standard v1_67 schema. Original files are kept
+under `world/data/masucraftfixes-v166-backup`, and completion is recorded in
+`world/data/masucraftfixes-v166-to-v167.properties`. After conversion, the
+native v1_67 schema is restored before Vault loads the world normally. Wolds
+contains snapshots from multiple schema generations that share the v1_66
+version number, so only IDs already present in Vault's persisted corruption
+quarantine are passed through the build 6573 reader. Native-compatible v1_66
+snapshot files remain unchanged. Successfully migrated IDs are removed from the
+quarantine, while files that still cannot be decoded remain preserved and
+quarantined. Unexpected NBT, backup, write, and verification failures still
+stop startup. Vault's `the_vault_VaultSnapshots.dat` manifest and segmented
+snapshot files use uncompressed NBT, unlike standard compressed Forge
+`SavedData` files.
 
 ## LuckPerms Permissions
 

@@ -4,11 +4,17 @@ import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 
 public class EventHandler {
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public void onServerAboutToStart(ServerAboutToStartEvent event) {
+        VaultV166DiskMigration.migrateIfRequired(event.getServer());
+    }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {

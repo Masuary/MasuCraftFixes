@@ -29,6 +29,7 @@ masucraftfixes-wolds
 - Vessel anti-AFK safeguards.
 - LuckPerms player-limit bypass tag.
 - FTB Essentials `/fly` compatibility with Angel Blocks, while retaining the vault flight restriction.
+- One-time Vault build `6573` `v1_66` to build `6884` `v1_67` data migration with verified backups. On Wolds, only snapshot IDs already quarantined by Vault are passed through the legacy reader; native-compatible `v1_66` history remains untouched.
 - Optional CasinoCraft mixins, only applied when CasinoCraft is loaded.
 
 ## Other Commands
