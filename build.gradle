@@ -17,7 +17,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
 
-version = '1.6.0'
+version = '1.6.1'
 group = 'com.masuary.masucraftfixes'
 archivesBaseName = 'masucraftfixes'
 
@@ -87,6 +87,7 @@ dependencies {
     implementation 'net.luckperms:api:5.4'
     implementation fg.deobf("curse.maven:ftbessentials-410811:4462414")
 
+    compileOnly fg.deobf("curse.maven:botania-225643:3936568")
     compileOnly fg.deobf("curse.maven:luckperms-431733:3807269")
 }
 

@@ -2,6 +2,31 @@
 
 ## Completed
 
+### Orechid Ignem Nether-Biome Compatibility (2026-08-28, v1.6.1)
+**Problem:** Botania 1.18.2-435 permits the Orechid Ignem to operate only when
+the dimension type has a ceiling. MasuCraft's Nether is disabled, while
+Overworld islands can use biomes in `#minecraft:is_nether`.
+
+**Solution:** Added a server-side `OrechidIgnemMixin` that permits operation
+when the biome at the flower's exact block position has the vanilla Nether
+biome tag. The mixin leaves Botania's original ceiling-dimension rule intact,
+does not run its added behavior on the logical client, and is skipped when
+Botania is absent.
+
+**Validation:**
+- Clean Java 17 build passed against Botania `1.18.2-435`.
+- The compile classpath resolved the exact CurseMaven artifact `3936568`.
+- The reobfuscated JAR contains the mixin, config registration, server-side
+  guard, biome lookup, and `BiomeTags.IS_NETHER` check.
+- Dedicated-server gameplay validation remains required before deployment.
+
+**Files:**
+- `src/main/java/com/masuary/masucraftfixes/mixin/OrechidIgnemMixin.java` (new)
+- `src/main/java/com/masuary/masucraftfixes/MasuCraftFixesMixinPlugin.java`
+- `src/main/resources/mixins.masucraftfixes.json`
+- `src/main/resources/META-INF/mods.toml`
+- `build.gradle` (Botania compile target added, version bumped `1.6.0` -> `1.6.1`)
+
 ### Vault Build 6574 v1_66 Data Compatibility (2026-07-26, v1.6.0)
 **Problem:** Vault Hunters build 6872 reuses the v1_66 schema version after changing
 several versioned field registries. Worlds upgraded directly from build 6574 cannot

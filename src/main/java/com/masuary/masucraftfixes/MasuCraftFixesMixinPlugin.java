@@ -11,6 +11,8 @@ import java.util.Set;
 
 public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
 
+    private static final String ORECHID_IGNEM_MIXIN =
+            "com.masuary.masucraftfixes.mixin.OrechidIgnemMixin";
     private static final Set<String> VAULT_V166_COMPATIBILITY_MIXINS = Set.of(
             "com.masuary.masucraftfixes.mixin.VaultSnapshotV166CompatibilityMixin"
     );
@@ -26,6 +28,10 @@ public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (ORECHID_IGNEM_MIXIN.equals(mixinClassName)) {
+            return isModLoaded("botania");
+        }
+
         if (!VAULT_V166_COMPATIBILITY_MIXINS.contains(mixinClassName)) {
             return true;
         }
@@ -42,6 +48,11 @@ public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
 
         return vaultModFile.getMods().stream()
                 .anyMatch(modInfo -> VaultV166Compatibility.TARGET_VAULT_VERSION.equals(modInfo.getVersion().toString()));
+    }
+
+    private static boolean isModLoaded(String modId) {
+        LoadingModList loadingModList = LoadingModList.get();
+        return loadingModList != null && loadingModList.getModFileById(modId) != null;
     }
 
     @Override

@@ -10,6 +10,7 @@
     "FTBCheatCommandsMixin",
     "IskalliaDevsMixin",
     "ModifyCrystalSuggestionsMixin",
+    "OrechidIgnemMixin",
     "PickarangMixin",
     "RewardMixin",
     "ServerPlayerMixin",

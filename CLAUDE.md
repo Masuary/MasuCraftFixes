@@ -9,7 +9,7 @@ Requires Java 17 (the system default may be Java 21):
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk PATH=/usr/lib/jvm/java-17-openjdk/bin:$PATH ./gradlew build
 ```
 
-Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.6.0`).
+Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.6.1`).
 
 ## Package Structure
 
@@ -27,6 +27,7 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 | `FTBCheatCommandsMixin` | `CheatCommands` (FTB Essentials) | Blocks `/fly` inside vault dimensions |
 | `IskalliaDevsMixin` | `IskalliaDevs` (The Vault) | Grants `IskalliaDevs.isDeveloper` based on `masucraftfixes.developer` LuckPerms permission |
 | `ModifyCrystalSuggestionsMixin` | `ModifyCrystalSubcommand` (The Vault) | Adds tab-completion suggestions for room pools in `/the_vault modify crystal addRoom` |
+| `OrechidIgnemMixin` | `SubTileOrechidIgnem` (Botania) | Allows the Orechid Ignem to operate server-side in Nether-tagged biomes outside ceiling dimensions |
 | `PickarangMixin` | `Pickarang` (Quark) | Prevents pickup of items tagged fake_item/PreventMagnetMovement |
 | `RewardMixin` | `Reward` (The Vault) | Grants reward armor models based on per-model LuckPerms permissions |
 | `ServerPlayerMixin` | `ServerPlayer` | Disables active FTB flight inside vault dimensions each tick |
@@ -42,6 +43,12 @@ schema reader is removed in the same process before Vault data loads normally.
 Later Vault versions skip this compatibility code entirely and read the
 standard v1_67 files without MasuCraftFixes migration support.
 
+The Orechid Ignem mixin preserves Botania's ceiling-dimension behavior and also
+allows operation when the biome at the flower's exact block position is in
+`#minecraft:is_nether`. The added behavior is server-side only; clients receive
+Botania's normal block, sound, and mana synchronization and do not need
+MasuCraftFixes installed.
+
 ## Dependencies
 
 Local JARs in `deps/`:
@@ -49,4 +56,5 @@ Local JARs in `deps/`:
 - `the_vault-1.18.2-20.0.3-remastered.6872.jar` - The Vault mod (mixin targets)
 
 Remote (via CurseMaven):
+- Botania 1.18.2-435 (compile-only mixin target)
 - FTB Essentials, Quark, AutoRegLib, LuckPerms

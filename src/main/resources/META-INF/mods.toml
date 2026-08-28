@@ -9,7 +9,8 @@ displayName="MasuCraft Fixes"
 authors="Masuary"
 description='''
 Server-side fixes for Vault Hunters, including legacy Vault data compatibility,
-Pickarang item tag filtering, LuckPerms player limit bypass, and flight prevention in vaults.
+Orechid Ignem Nether-biome support, Pickarang item tag filtering,
+LuckPerms player limit bypass, and flight prevention in vaults.
 '''
 
 [[dependencies.masucraftfixes]]
@@ -25,3 +26,10 @@ Pickarang item tag filtering, LuckPerms player limit bypass, and flight preventi
     versionRange="[1.18.2,1.19)"
     ordering="NONE"
     side="BOTH"
+
+[[dependencies.masucraftfixes]]
+    modId="botania"
+    mandatory=false
+    versionRange="[1.18.2-435]"
+    ordering="AFTER"
+    side="SERVER"
