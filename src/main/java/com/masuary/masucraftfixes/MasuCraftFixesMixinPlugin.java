@@ -33,6 +33,8 @@ public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
     );
     private static final String WOLDS_FLOAT_LIST_MIGRATION_MIXIN =
             "com.masuary.masucraftfixes.mixin.WoldsFloatListAdapterMigrationSafetyMixin";
+    private static final String VAULT_CHALLENGE_TICK_GUARD_MIXIN =
+            "com.masuary.masucraftfixes.mixin.VaultChallengeTickGuardMixin";
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -55,6 +57,10 @@ public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
 
         if (VAULT_6884_MIGRATION_MIXINS.contains(mixinClassName)) {
             return isModVersion("the_vault", TARGET_VAULT_VERSION);
+        }
+
+        if (VAULT_CHALLENGE_TICK_GUARD_MIXIN.equals(mixinClassName)) {
+            return isModVersion("the_vault", VaultChallengeTickGuard.TARGET_VAULT_VERSION);
         }
 
         if (WOLDS_FLOAT_LIST_MIGRATION_MIXIN.equals(mixinClassName)) {

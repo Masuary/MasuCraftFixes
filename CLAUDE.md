@@ -38,10 +38,60 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 | `IntArrayAdapterMigrationSafetyMixin` | `IntArrayAdapter` (The Vault) | Bounds integer-array allocation while legacy snapshots are being migrated |
 | `LongArrayAdapterMigrationSafetyMixin` | `LongArrayAdapter` (The Vault) | Bounds long-array allocation while legacy snapshots are being migrated |
 | `ServerPlayerMixin` | `ServerPlayer` | Disables active FTB flight inside vault dimensions each tick |
+| `VaultChallengeTickGuardMixin` | `ChallengeManager` (The Vault) | Prevents stale server-tick callbacks from accessing unloaded, replaced, detached, or deletion-marked worlds |
 | `VaultSnapshotV166CompatibilityMixin` | `VaultSnapshot` (The Vault) | Promotes fully decoded legacy snapshots during the one-time v1_67 disk migration |
 | `WoldsFloatListAdapterMigrationSafetyMixin` | `ElixirBreakpointMap.FloatListAdapter` (Wolds Vaults) | Bounds elixir float-list allocation while legacy snapshots are being migrated |
 
 The three FTB Essentials flight mixins are applied only when `ftbessentials` is loaded. They use FTB's persisted `fly` flag as the flight-ownership signal and leave other flight providers to their own compatibility logic.
+
+### Vault challenge unload guard (1.7.11)
+
+The server-only challenge guard is pinned to The Vault `1.18.2-3.21.6.6884`.
+It injects into `ChallengeManager.lambda$registerEvents$3`, before the virtual
+`onTick` call reaches elite or other challenge subclasses. World deletion can
+close chunk storage earlier in the same tick, before native `ChallengeData`
+cleanup detaches the challenge. The guard requires an undeleted challenge,
+the same attached and registered world instance, and no virtual-world deletion
+flag. Invalid callbacks are canceled so native cleanup can finish normally.
+A warning records the challenge UUID, position, and dimension once per stale
+manager. The guard does not use active-vault membership, change animation
+serialization, alter world deletion, or directly edit any saved data.
+Clients and Velocity plugins do not need this update.
+
+`./gradlew test` covers the lifecycle policy, including world replacement and
+reattachment, and verifies the synthetic callback, registration, and shadow
+fields against the exact Vault JAR without loading Minecraft classes. Javac
+hides synthetic methods, so only the injector's target warning is suppressed;
+the bytecode test and required runtime injection enforce the target instead.
+Dedicated-server reproduction remains a separate validation gate.
+
+### Challenge guard diagnostics (1.7.12)
+
+`VaultChallengeGuardMonitor` owns server-thread-only session counters and the
+dedicated `logs/masucraftfixes-vault-challenge-guard.log`. Forge server-start,
+server-tick END, and server-stopped events initialize, summarize, and close it.
+`VaultChallengeGuardDiagnostics` keeps policy/counters independent of Minecraft
+for tests. `VaultChallengeGuardLog` owns an isolated Log4j rolling appender using
+Forge's existing Log4j dependency, without attaching to or changing root logging.
+Writes flush immediately. Append mode preserves prior boots; 5 MB rotation plus
+three archives bounds retention. Up to 100 BLOCKED/DETACHED details are emitted
+per one-minute summary interval; total counters never depend on that limit.
+I/O failures disable diagnostics until restart with a contextual main-log error,
+but must not change the challenge guard's decision.
+
+START reports version eligibility, while CALLBACK_OBSERVED proves the injected
+callback ran. A required TAIL injection into base `ChallengeManager.onDetach`
+emits DETACHED only for previously blocked managers and clears diagnostic state.
+It proves base listener cleanup, not completion of subclass cleanup or disk saves.
+The existing main-log stale-world warning is retained. No active world references
+are retained by diagnostics. See README for event meanings and the monitoring command.
+Tests exercise real file output, flushing, reopen/append, rotation, creation
+failure, newline escaping, counters, throttling, and exact detach target metadata.
+Test-only `log4j2-test.xml` avoids initializing Forge's terminal/file appenders
+inside the noninteractive test worker; it is not packaged in the mod JAR.
+These checks do not replace verification on the affected dedicated server.
+
+### Legacy Vault snapshot migration
 
 The v1_66 compatibility reader is restricted to The Vault
 `1.18.2-3.21.6.6884`. Before normal world loading, MasuCraftFixes atomically
