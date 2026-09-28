@@ -6,48 +6,40 @@ import net.luckperms.api.model.user.User;
 import net.luckperms.api.platform.PlayerAdapter;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public class LuckPermsInt {
 
     public static boolean doesIgnoreLimit(ServerPlayer player) {
-        try {
-            LuckPermsProvider.get();
-        } catch (IllegalStateException e) {
-            MasuCraftFixes.LOGGER.debug("LuckPerms not loaded yet, allowing login");
-            return true;
+        Optional<Boolean> ignoresLimit = permissionIfAvailable(player, "masucraftfixes.ignores_player_limit");
+        if (ignoresLimit.isEmpty()) {
+            MasuCraftFixes.LOGGER.debug("LuckPerms data unavailable for {}, allowing login", player.getGameProfile().getName());
         }
-
-        PlayerAdapter<ServerPlayer> adapter = LuckPermsProvider.get().getPlayerAdapter(ServerPlayer.class);
-        CachedPermissionData permissionData = adapter.getPermissionData(player);
-
-        return permissionData.checkPermission("masucraftfixes.ignores_player_limit").asBoolean();
+        return ignoresLimit.orElse(true);
     }
 
     public static boolean canEditCommandBlocks(ServerPlayer player) {
-        try {
-            LuckPermsProvider.get();
-        } catch (IllegalStateException e) {
-            return false;
-        }
-
-        PlayerAdapter<ServerPlayer> adapter = LuckPermsProvider.get().getPlayerAdapter(ServerPlayer.class);
-        CachedPermissionData permissionData = adapter.getPermissionData(player);
-
-        return permissionData.checkPermission("masucraftfixes.commandblock.edit").asBoolean();
+        return permissionIfAvailable(player, "masucraftfixes.commandblock.edit").orElse(false);
     }
 
-    public static boolean hasPermission(ServerPlayer player, String permission) {
-        try {
-            LuckPermsProvider.get();
-        } catch (IllegalStateException e) {
-            return false;
+    /**
+     * Empty when LuckPerms is not enabled yet or no longer holds data for this player entity. Vanilla removes a
+     * player 20 ticks after death, and Forge then invalidates the LuckPerms capability until the player respawns.
+     */
+    public static Optional<Boolean> permissionIfAvailable(ServerPlayer player, String permission) {
+        if (player.isRemoved()) {
+            return Optional.empty();
         }
-
-        PlayerAdapter<ServerPlayer> adapter = LuckPermsProvider.get().getPlayerAdapter(ServerPlayer.class);
-        CachedPermissionData permissionData = adapter.getPermissionData(player);
-
-        return permissionData.checkPermission(permission).asBoolean();
+        try {
+            PlayerAdapter<ServerPlayer> adapter = LuckPermsProvider.get().getPlayerAdapter(ServerPlayer.class);
+            CachedPermissionData permissionData = adapter.getPermissionData(player);
+            return Optional.of(permissionData.checkPermission(permission).asBoolean());
+        } catch (IllegalStateException exception) {
+            MasuCraftFixes.LOGGER.debug("LuckPerms could not check {} for {}: {}",
+                    permission, player.getGameProfile().getName(), exception.getMessage());
+            return Optional.empty();
+        }
     }
 
     public static boolean hasPermission(UUID uuid, String permission) {

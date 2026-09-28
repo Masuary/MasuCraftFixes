@@ -63,7 +63,7 @@ public class PatreonPerksHandler {
                 iterator.remove();
                 ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
                 if (player != null) {
-                    updatePlayerPatronStatus(player);
+                    updatePlayerPatronStatusSafely(player);
                 }
             } else {
                 entry.setValue(remaining);
@@ -71,7 +71,21 @@ public class PatreonPerksHandler {
         }
     }
 
+    private static void updatePlayerPatronStatusSafely(ServerPlayer player) {
+        try {
+            updatePlayerPatronStatus(player);
+        } catch (RuntimeException exception) {
+            MasuCraftFixes.LOGGER.error("Failed to update patron perks for {}; their perks are unchanged",
+                    player.getGameProfile().getName(), exception);
+        }
+    }
+
+    /** Players on the death screen have no LuckPerms data, so their update waits until they respawn. */
     public static void updatePlayerPatronStatus(ServerPlayer player) {
+        if (player.isRemoved()) {
+            scheduleUpdate(player.getUUID());
+            return;
+        }
         PatreonTier effectiveTier = getEffectiveLpTier(player);
 
         if (effectiveTier != null) {
@@ -82,15 +96,20 @@ public class PatreonPerksHandler {
     }
 
     private static PatreonTier getEffectiveLpTier(ServerPlayer player) {
-        if (LuckPermsInt.hasPermission(player, "masucraftfixes.developer")) {
+        if (requirePermission(player, "masucraftfixes.developer")) {
             return PatreonTier.LEGEND;
         }
         for (int i = 0; i < PERMISSION_NODES.length; i++) {
-            if (LuckPermsInt.hasPermission(player, PERMISSION_NODES[i])) {
+            if (requirePermission(player, PERMISSION_NODES[i])) {
                 return PERMISSION_TIERS[i];
             }
         }
         return null;
+    }
+
+    private static boolean requirePermission(ServerPlayer player, String permission) {
+        return LuckPermsInt.permissionIfAvailable(player, permission).orElseThrow(() -> new IllegalStateException(
+                "LuckPerms permission data is unavailable for " + player.getGameProfile().getName()));
     }
 
     @SuppressWarnings("unchecked")
@@ -264,7 +283,7 @@ public class PatreonPerksHandler {
         server.execute(() -> {
             ServerPlayer player = server.getPlayerList().getPlayer(uuid);
             if (player != null) {
-                updatePlayerPatronStatus(player);
+                updatePlayerPatronStatusSafely(player);
             }
         });
     }

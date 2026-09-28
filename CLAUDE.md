@@ -9,7 +9,7 @@ Requires Java 17 (the system default may be Java 21):
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk PATH=/usr/lib/jvm/java-17-openjdk/bin:$PATH ./gradlew build
 ```
 
-Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.6.1`).
+Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.6.2`).
 
 ## Package Structure
 
@@ -48,6 +48,18 @@ allows operation when the biome at the flower's exact block position is in
 `#minecraft:is_nether`. The added behavior is server-side only; clients receive
 Botania's normal block, sound, and mana synchronization and do not need
 MasuCraftFixes installed.
+
+## LuckPerms Player Checks
+
+Player-entity permission checks go through `LuckPermsInt.permissionIfAvailable`,
+which returns empty instead of throwing when LuckPerms has no data for the
+entity. Vanilla removes a player 20 ticks after death and Forge then
+invalidates the LuckPerms capability until respawn, so the player adapter
+throws "Capability missing" for anyone on the death screen. Patron updates for
+a removed player are rescheduled until they respawn, an unavailable check never
+revokes perks, and every patron update is isolated so a failure is logged
+instead of stopping the server tick loop. Login limit checks keep their
+allow-on-unavailable behavior; command-block edits fail closed.
 
 ## Dependencies
 

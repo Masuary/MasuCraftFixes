@@ -2,6 +2,40 @@
 
 ## Completed
 
+### Dead-Player LuckPerms Crash (2026-09-29, v1.6.2)
+**Problem:** A dedicated server crashed with `IllegalStateException: Capability
+missing` from `LuckPermsInt.hasPermission(ServerPlayer, String)` during
+`PatreonPerksHandler.tick`. Vanilla calls `remove(KILLED)` on a player 20 ticks
+after death, and Forge invalidates entity capabilities on removal, so LuckPerms'
+player adapter has no data for a player waiting on the death screen. A scheduled
+or permission-change patron update for such a player threw on the server
+thread; the tick path crashed the server, and the task path logged the error
+and dropped the update.
+
+**Solution:** `LuckPermsInt.permissionIfAvailable` returns empty for removed
+players and for LuckPerms `IllegalStateException`s. Patron updates for a
+removed player are rescheduled until respawn, an unavailable check throws
+instead of revoking perks, and each update runs inside a logged guard.
+`doesIgnoreLimit` keeps allow-on-unavailable and `canEditCommandBlocks` keeps
+deny-on-unavailable.
+
+**Validation:**
+- Clean Java 17 build with no compiler warnings.
+- Reproduced on a local copy of the VH Remastered MAIN server with 1.6.1:
+  a LuckPerms node change while a player was dead logged `Capability missing`
+  from `LuckPermsInt.hasPermission`.
+- Same test with 1.6.2: no MasuCraftFixes error; the update was rescheduled
+  through the tick path while the player was dead, then granted the patron
+  tier after respawn; removing the node revoked it normally.
+- LuckPerms 5.4.26 still logs its own `Capability missing` from
+  `ForgeCommandListUpdater` on its async executor for dead players; that is
+  upstream behavior and does not affect the server thread.
+
+**Files:**
+- `src/main/java/com/masuary/masucraftfixes/LuckPermsInt.java`
+- `src/main/java/com/masuary/masucraftfixes/PatreonPerksHandler.java`
+- `build.gradle` (version bumped `1.6.1` -> `1.6.2`)
+
 ### Orechid Ignem Nether-Biome Compatibility (2026-08-28, v1.6.1)
 **Problem:** Botania 1.18.2-435 permits the Orechid Ignem to operate only when
 the dimension type has a ceiling. MasuCraft's Nether is disabled, while
