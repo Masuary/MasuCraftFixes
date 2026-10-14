@@ -12,6 +12,7 @@
     "ModifyCrystalSuggestionsMixin",
     "OrechidIgnemMixin",
     "PickarangMixin",
+    "PlayerListMixin",
     "RewardMixin",
     "ServerPlayerMixin"
   ],

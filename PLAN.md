@@ -2,6 +2,44 @@
 
 ## Completed
 
+### Abandoned Vault Worlds (2026-10-14, v1.8.0)
+**Problem:** Vault Hunters keeps every vault world loaded until its vault ends, and a vault
+waits for its players indefinitely. MAIN held 23 vault worlds (442 MB), each with a player
+who logged out inside and had not returned for 30 to 164 days (one for 1 day). On VH
+Remastered 3.0.0, `the_vault_Vaults.dat` from build 6872 cannot be read, so all of them lose
+their vault and are never deleted. A player saved inside a missing vault world is placed by
+vanilla in the overworld at the vault coordinates (underground or inside the hub).
+
+**Solution:** `AbandonedVaults.cleanUp` on `ServerStartedEvent` closes running vaults whose
+players have all been away from this server for 7 days (`VaultUtils.closeVault`), marks
+vault worlds without a running vault for deletion (Vault Hunters deletes them), and deletes
+unregistered `vault_<uuid>` folders. `PlayerListMixin` places players whose saved vault
+world is dead at the overworld spawn.
+
+**Validation:** Docker copy of the live MAIN world on VH 6938
+(`/mnt/data/AI/tmp/crossserver-reset-6938/evidence-281/mcf180-run*.log`): first boot marked
+all 23 worlds, Vault Hunters deleted their folders, a synthetic unregistered `vault_<uuid>`
+folder was deleted and `vault_keepme` was kept. Through the real `placeNewPlayer`, players
+saved in a deleted and in a never-registered vault world were placed at the world spawn,
+and an overworld player kept their position. A cold restart found nothing left to clean.
+Running vault with a real client (CMA on Prism `Remastered 3.0.0`, joined through a
+localhost relay straight to the Forge container, `evidence-281/mcf180-client-*`): the player
+entered a vault and logged out inside it. A restart with fresh playerdata closed nothing and
+the rejoin landed back in the live vault. After backdating `playerdata/<uuid>.dat` by 8 days,
+startup logged "Vault 7f0188f5-... was closed because no player in it has played on this
+server for 7 days", Vault Hunters deleted the folder and registry entry, and the rejoin was
+placed at the overworld spawn (9.5, 136, -5.5) at full health.
+Found on the way, not caused by this mod: on VH 6938 the first vault join loads every stored
+vault snapshot (`PlayerSnapshotDump` -> `VaultSnapshots.getAll`). With MAIN's 10,662 build-6872
+snapshots the server thread stalled and hit `OutOfMemoryError` at `-Xmx8G` after 2,038, so the
+QA copy's `data/vault_snapshots` was moved aside to finish the run. With the folder archived, a
+fresh vault entry took one 7.9 s hitch and Vault Hunters recreated the folder for new runs, so
+the 6938 upgrade archives it on every server (`_deploy/<server>/MOVE.txt`); no code change.
+
+**Files:** `AbandonedVaults.java` (new), `mixin/PlayerListMixin.java` (new),
+`EventHandler.java`, `mixins.masucraftfixes.json`, `build.gradle` (version `1.7.0` -> `1.8.0`,
+`vaultCleanupQa` source set), `src/vaultCleanupQa/` (local QA mod, not released).
+
 ### Retire the Vault v1_66 Migration; Target VH Remastered 3.0.0 (2026-10-14, v1.7.0)
 **Problem:** The build 6574 v1_66 to v1_67 migration (v1.6.0) only ran on Vault build 6872
 and had done its job. On VH Remastered 3.0.0 (build 6938) both the startup migration and

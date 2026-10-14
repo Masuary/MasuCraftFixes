@@ -17,7 +17,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
 
-version = '1.7.0'
+version = '1.8.0'
 group = 'com.masuary.masucraftfixes'
 archivesBaseName = 'masucraftfixes'
 
@@ -131,3 +131,21 @@ publishing {
         }
     }
 }
+
+sourceSets {
+    vaultCleanupQa {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations.vaultCleanupQaImplementation.extendsFrom configurations.implementation
+
+tasks.register('vaultCleanupQaJar', Jar) {
+    group = 'verification'
+    description = 'Builds the separate disposable-world vault cleanup QA mod; never part of the release jar.'
+    archiveFileName = 'masucraftfixes-vault-cleanup-local-qa.jar'
+    destinationDirectory = layout.buildDirectory.dir('vault-cleanup-qa')
+    from sourceSets.vaultCleanupQa.output
+}
+reobf { vaultCleanupQaJar {} }
+tasks.named('vaultCleanupQaJar') { finalizedBy 'reobfVaultCleanupQaJar' }

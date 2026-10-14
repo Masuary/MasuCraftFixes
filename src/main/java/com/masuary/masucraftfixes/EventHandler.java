@@ -6,6 +6,7 @@ import net.minecraft.server.players.PlayerList;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
@@ -62,6 +63,13 @@ public class EventHandler {
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getPlayer() instanceof ServerPlayer serverPlayer && ModList.get().isLoaded("the_vault")) {
             PatreonPerksHandler.onPlayerLeave(serverPlayer.getUUID());
+        }
+    }
+
+    @SubscribeEvent
+    public void onServerStarted(ServerStartedEvent event) {
+        if (ModList.get().isLoaded("the_vault")) {
+            AbandonedVaults.cleanUp(event.getServer());
         }
     }
 

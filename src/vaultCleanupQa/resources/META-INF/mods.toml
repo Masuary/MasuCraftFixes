@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[40,)"
+license="All Rights Reserved"
+[[mods]]
+modId="masucraftfixes_vaultqa"
+version="1.0.0"
+displayName="Local Vault Cleanup QA"
+description="Disposable copied-world checks for abandoned vault cleanup. Never distribute with the release."
+[[dependencies.masucraftfixes_vaultqa]]
+modId="masucraftfixes"
+mandatory=true
+versionRange="[1.8.0,)"
+ordering="AFTER"
+side="SERVER"
+[[dependencies.masucraftfixes_vaultqa]]
+modId="the_vault"
+mandatory=true
+versionRange="[0,)"
+ordering="AFTER"
+side="SERVER"
