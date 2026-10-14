@@ -13,8 +13,7 @@
     "OrechidIgnemMixin",
     "PickarangMixin",
     "RewardMixin",
-    "ServerPlayerMixin",
-    "VaultSnapshotV166CompatibilityMixin"
+    "ServerPlayerMixin"
   ],
   "injectors": {
     "maxShiftBy": 10,

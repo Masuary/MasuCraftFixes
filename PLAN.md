@@ -2,6 +2,24 @@
 
 ## Completed
 
+### Retire the Vault v1_66 Migration; Target VH Remastered 3.0.0 (2026-10-14, v1.7.0)
+**Problem:** The build 6574 v1_66 to v1_67 migration (v1.6.0) only ran on Vault build 6872
+and had done its job. On VH Remastered 3.0.0 (build 6938) both the startup migration and
+the snapshot mixin skip themselves, leaving dead code and an unused config option.
+
+**Fix:** Removed `VaultV166Compatibility`, `VaultV166DiskMigration`,
+`VaultSnapshotV166CompatibilityMixin`, `MasuCraftFixesConfig` and their registration;
+the mixin plugin keeps only the Botania gate for `OrechidIgnemMixin`. Compiled against
+the 6938 jar. `jar-api-compat` against 6938: no missing classes, members or mixin targets.
+
+**Upgrade:** Confirm `world/data/masucraftfixes-v166-to-v167.properties` exists on every
+server that once held build 6574 data before installing 1.7.0. The old
+`config/masucraftfixes-common.toml` is no longer read and can be deleted.
+
+**Files:** `MasuCraftFixes.java`, `EventHandler.java`, `MasuCraftFixesMixinPlugin.java`,
+`mixins.masucraftfixes.json`, `mods.toml`, `build.gradle` (version `1.6.2` -> `1.7.0`,
+Vault dependency 6872 -> 6938); four classes deleted.
+
 ### Dead-Player LuckPerms Crash (2026-09-29, v1.6.2)
 **Problem:** A dedicated server crashed with `IllegalStateException: Capability
 missing` from `LuckPermsInt.hasPermission(ServerPlayer, String)` during

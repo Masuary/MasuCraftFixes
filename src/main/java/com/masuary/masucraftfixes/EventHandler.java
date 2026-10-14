@@ -6,7 +6,6 @@ import net.minecraft.server.players.PlayerList;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
@@ -17,11 +16,6 @@ import net.minecraftforge.server.permission.nodes.PermissionTypes;
 public class EventHandler {
 
     private static boolean luckPermsEventSubscribed;
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public void onServerAboutToStart(ServerAboutToStartEvent event) {
-        VaultV166DiskMigration.migrateIfRequired(event.getServer());
-    }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {

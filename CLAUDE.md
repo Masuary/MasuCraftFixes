@@ -9,7 +9,7 @@ Requires Java 17 (the system default may be Java 21):
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk PATH=/usr/lib/jvm/java-17-openjdk/bin:$PATH ./gradlew build
 ```
 
-Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.6.2`).
+Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.7.0`).
 
 ## Package Structure
 
@@ -31,17 +31,10 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 | `PickarangMixin` | `Pickarang` (Quark) | Prevents pickup of items tagged fake_item/PreventMagnetMovement |
 | `RewardMixin` | `Reward` (The Vault) | Grants reward armor models based on per-model LuckPerms permissions |
 | `ServerPlayerMixin` | `ServerPlayer` | Disables active FTB flight inside vault dimensions each tick |
-| `VaultSnapshotV166CompatibilityMixin` | `VaultSnapshot` (The Vault) | Decodes build 6574 snapshots during the one-time v1_67 disk migration |
 
-The v1_66 compatibility mixin and migration are applied only to The Vault
-`1.18.2-20.0.3-remastered.6872`. Before normal world loading, MasuCraftFixes
-atomically converts active Vault records and historical snapshots from the
-ambiguous build 6574 v1_66 schema to the standard v1_67 schema. Original files
-are retained under `world/data/masucraftfixes-v166-backup`, and completion is
-recorded in `world/data/masucraftfixes-v166-to-v167.properties`. The temporary
-schema reader is removed in the same process before Vault data loads normally.
-Later Vault versions skip this compatibility code entirely and read the
-standard v1_67 files without MasuCraftFixes migration support.
+The one-time build 6574 v1_66 to v1_67 Vault data migration (v1.6.0) was removed
+in v1.7.0. A server that ran it has `world/data/masucraftfixes-v166-to-v167.properties`;
+its byte-verified originals remain under `world/data/masucraftfixes-v166-backup`.
 
 The Orechid Ignem mixin preserves Botania's ceiling-dimension behavior and also
 allows operation when the biome at the flower's exact block position is in
@@ -65,7 +58,7 @@ allow-on-unavailable behavior; command-block edits fail closed.
 
 Local JARs in `deps/`:
 - `luckperms-forge.jar` - LuckPerms Forge API
-- `the_vault-1.18.2-20.0.3-remastered.6872.jar` - The Vault mod (mixin targets)
+- `the_vault-1.18.2-20.0.3-remastered.6938.jar` - The Vault mod, VH Remastered 3.0.0 (mixin targets)
 
 Remote (via CurseMaven):
 - Botania 1.18.2-435 (compile-only mixin target)
