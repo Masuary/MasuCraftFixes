@@ -17,7 +17,7 @@ unregistered `vault_<uuid>` folders. `PlayerListMixin` places players whose save
 world is dead at the overworld spawn.
 
 **Validation:** Docker copy of the live MAIN world on VH 6938
-(`/mnt/data/AI/tmp/crossserver-reset-6938/evidence-281/mcf180-run*.log`): first boot marked
+(`/mnt/data/AI/work/crossserver-reset-6938/evidence-281/mcf180-run*.log`): first boot marked
 all 23 worlds, Vault Hunters deleted their folders, a synthetic unregistered `vault_<uuid>`
 folder was deleted and `vault_keepme` was kept. Through the real `placeNewPlayer`, players
 saved in a deleted and in a never-registered vault world were placed at the world spawn,
