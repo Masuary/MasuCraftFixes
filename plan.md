@@ -10,8 +10,8 @@ Source diagnosis:
 - `/home/masuary/Downloads/masucraftfixes-vaultsync.log`
 - `/home/masuary/Downloads/Logs/masucraftfixes-stage0.log`
 - `/home/masuary/Downloads/Logs/masucraftfixes-vaultsync.log`
-- MasuCraftFixes source: `/mnt/data/MasuCraft Mods/MasuCraftFixes/src/main/java/com/masuary/masucraftfixes`
-- Wolds source: `/mnt/data/MasuCraft Mods/Wolds-Vaults-Official-Mod`
+- MasuCraftFixes source: `/mnt/data/Minecraft/Mods/MasuCraftFixes/src/main/java/com/masuary/masucraftfixes`
+- Wolds source: `/mnt/data/Minecraft/Forks/Wolds-Vaults-Official-Mod`
 
 This plan now tracks both implementation status and remaining validation work.
 
@@ -23,7 +23,7 @@ This plan now tracks both implementation status and remaining validation work.
 - Latest profile report: `/home/masuary/Downloads/Logs/Y280i8UbT7-report.md`.
 - Built artifact from Stage 0: `build/libs/masucraftfixes-wolds-1.7.1.jar`.
 - Backend 1 boot validation: passed on 2026-06-12.
-- Backend 1 test location: `/mnt/data/Test Server/`.
+- Backend 1 test location: `/mnt/data/Minecraft/Servers/Test-Server/`.
 - Stage 1 Wolds filter necklace behavior fix: not implemented; now classified as low-risk cleanup rather than the primary next TPS fix for the latest workload.
 - Stage 2 hammer-adjacent behavior fixes: not implemented.
 - Stage 3 virtual-world behavior fixes: not implemented.
@@ -31,8 +31,8 @@ This plan now tracks both implementation status and remaining validation work.
 
 Backend 1 boot validation result:
 
-1. Installed `build/libs/masucraftfixes-wolds-1.7.1.jar` in `/mnt/data/Test Server/Backend 1/mods/`.
-2. Backed up the previous `masucraftfixes-wolds-1.7.0.jar` under `/mnt/data/Test Server/Backend 1/disabled-masucraftfixes-stage0-test/`.
+1. Installed `build/libs/masucraftfixes-wolds-1.7.1.jar` in `/mnt/data/Minecraft/Servers/Test-Server/Backend 1/mods/`.
+2. Backed up the previous `masucraftfixes-wolds-1.7.0.jar` under `/mnt/data/Minecraft/Servers/Test-Server/Backend 1/disabled-masucraftfixes-stage0-test/`.
 3. Server reached normal started state: `Done (12.078s)!`.
 4. `/masucraftstage0 status` was registered and returned disabled-by-default Stage 0 counters.
 5. `config/masucraftfixes-stage0.properties` was created.
@@ -274,7 +274,7 @@ Runtime requirements:
 
 Validation:
 
-- Backend 1 boot test passed: the test server from `/mnt/data/Test Server/Backend 1` reached `Done (12.078s)!` with the new MasuCraftFixes jar.
+- Backend 1 boot test passed: the test server from `/mnt/data/Minecraft/Servers/Test-Server/Backend 1` reached `Done (12.078s)!` with the new MasuCraftFixes jar.
 - `/masucraftstage0 status` returned disabled-by-default counters and confirmed command registration.
 - Shutdown saved all dimensions cleanly.
 - Downloaded live logs confirm diagnostics ran during mapped-vault load and wrote `stage0_summary` lines.
@@ -641,7 +641,7 @@ Regression risks:
 
 Backend 1 boot validation:
 
-1. Completed: deploy `build/libs/masucraftfixes-wolds-1.7.1.jar` to Backend server 1 in `/mnt/data/Test Server/`.
+1. Completed: deploy `build/libs/masucraftfixes-wolds-1.7.1.jar` to Backend server 1 in `/mnt/data/Minecraft/Servers/Test-Server/`.
 2. Completed: start Backend server 1.
 3. Completed: verify the server reaches normal started state.
 4. Completed: verify there are no MasuCraftFixes, Stage 0, or Wolds optional telemetry mixin crashes.
@@ -708,7 +708,7 @@ Virtual-world and mapped-generation work:
 
 1. Completed: add low-overhead MasuCraftFixes-only telemetry and validation counters.
 2. Completed: build the MasuCraftFixes jar with Stage 0 telemetry.
-3. Completed: deploy Stage 0 by updating only the MasuCraftFixes jar on Backend server 1 under `/mnt/data/Test Server/`.
+3. Completed: deploy Stage 0 by updating only the MasuCraftFixes jar on Backend server 1 under `/mnt/data/Minecraft/Servers/Test-Server/`.
 4. Completed: boot Backend server 1 and verify there are no MasuCraftFixes, Stage 0, or Wolds optional telemetry mixin regressions.
 5. Completed: profile the mapped-vault workload with all relevant logs and write `/home/masuary/Downloads/Logs/Y280i8UbT7-report.md`.
 6. Pending: investigate duplicate entity UUID warnings and `WorldGenRegion` block-entity-before-created warnings in mapped-vault generation/spawn paths.

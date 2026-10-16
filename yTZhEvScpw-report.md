@@ -4,8 +4,8 @@ Inputs:
 
 - `/home/masuary/Downloads/yTZhEvScpw.sparkprofile`
 - `/home/masuary/Downloads/masucraftfixes-vaultsync.log`
-- Repo implementation at `/mnt/data/MasuCraft Mods/MasuCraftFixes/src/main/java/com/masuary/masucraftfixes`
-- Wolds source inspected at `/mnt/data/MasuCraft Mods/Wolds-Vaults-Official-Mod`
+- Repo implementation at `/mnt/data/Minecraft/Mods/MasuCraftFixes/src/main/java/com/masuary/masucraftfixes`
+- Wolds source inspected at `/mnt/data/Minecraft/Forks/Wolds-Vaults-Official-Mod`
 
 ## Verdict
 
@@ -114,8 +114,8 @@ Practical meaning:
 
 Source confirmations:
 
-- `ToolItem.getHammerPositions`: `/home/masuary/.claude/docs/mods/Forge/decompiled/the_vault-1.18.2-3.21.5.6573-decompiled/iskallia/vault/item/tool/ToolItem.java:532`
-- Vault hammer mixin: `/home/masuary/.claude/docs/mods/Forge/decompiled/the_vault-1.18.2-3.21.5.6573-decompiled/iskallia/vault/mixin/MixinServerPlayerGameMode.java:150`
+- `ToolItem.getHammerPositions`: `/home/masuary/.claude/docs/minecraft/mods/Forge/decompiled/the_vault-1.18.2-3.21.5.6573-decompiled/iskallia/vault/item/tool/ToolItem.java:532`
+- Vault hammer mixin: `/home/masuary/.claude/docs/minecraft/mods/Forge/decompiled/the_vault-1.18.2-3.21.5.6573-decompiled/iskallia/vault/mixin/MixinServerPlayerGameMode.java:150`
 - Vanilla packet handler: `/home/masuary/.claude/docs/minecraft-1.18.2-decompiled/net/minecraft/server/network/ServerGamePacketListenerImpl.java:949`
 - Vanilla block break: `/home/masuary/.claude/docs/minecraft-1.18.2-decompiled/net/minecraft/server/level/ServerPlayerGameMode.java:126`
 
@@ -151,8 +151,8 @@ Wolds filter necklace source confirms the per-pickup pattern:
 
 Source confirmations:
 
-- Wolds pickup event: `/mnt/data/MasuCraft Mods/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/events/PlayerEvents.java:53`
-- Wolds filter check: `/mnt/data/MasuCraft Mods/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/items/filter_necklace/FilterNecklaceItem.java:77`
+- Wolds pickup event: `/mnt/data/Minecraft/Forks/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/events/PlayerEvents.java:53`
+- Wolds filter check: `/mnt/data/Minecraft/Forks/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/items/filter_necklace/FilterNecklaceItem.java:77`
 - Vanilla item pickup event call: `/home/masuary/.claude/docs/minecraft-1.18.2-decompiled/net/minecraft/world/entity/item/ItemEntity.java:332`
 - Vanilla player entity touch: `/home/masuary/.claude/docs/minecraft-1.18.2-decompiled/net/minecraft/world/entity/player/Player.java:611`
 
@@ -208,9 +208,9 @@ Wolds map source confirms maps modify the crystal before runtime:
 
 Source confirmations:
 
-- Wolds map crystal recipe: `/mnt/data/MasuCraft Mods/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/items/gear/VaultMapItem.java:222`
-- Map size addition: `/mnt/data/MasuCraft Mods/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/items/gear/VaultMapItem.java:239`
-- Layout modification: `/mnt/data/MasuCraft Mods/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/recipes/crystal/LayoutModificationRecipe.java:35`
+- Wolds map crystal recipe: `/mnt/data/Minecraft/Forks/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/items/gear/VaultMapItem.java:222`
+- Map size addition: `/mnt/data/Minecraft/Forks/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/items/gear/VaultMapItem.java:239`
+- Layout modification: `/mnt/data/Minecraft/Forks/Wolds-Vaults-Official-Mod/src/main/java/xyz/iwolfking/woldsvaults/recipes/crystal/LayoutModificationRecipe.java:35`
 
 ## Other Sustained Costs
 
