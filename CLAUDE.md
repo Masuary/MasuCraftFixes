@@ -88,4 +88,4 @@ Remote (via CurseMaven):
 - Botania 1.18.2-435 (compile-only mixin target)
 - FTB Essentials, Quark, AutoRegLib, LuckPerms
 
-<!-- masuary-os-area --> Masuary OS area: [vault-hunters](/mnt/data/AI/os/areas/vault-hunters.md) (where this project sits in the map; update that line when this folder moves)
+<!-- masuary-os-area --> Masuary OS area: [minecraft](/mnt/data/AI/os/areas/minecraft.md) (where this project sits in the map; update that line when this folder moves)
