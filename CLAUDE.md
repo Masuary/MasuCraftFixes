@@ -141,3 +141,5 @@ Local JARs in `deps/`:
 
 Remote (via CurseMaven):
 - FTB Essentials, Quark, AutoRegLib, LuckPerms
+
+<!-- masuary-os-area --> Masuary OS area: [wolds](/mnt/data/AI/os/areas/wolds.md) (where this project sits in the map; update that line when this folder moves)
