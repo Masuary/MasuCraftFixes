@@ -55,4 +55,28 @@ public class VaultChallengeTickGuardTest {
     public void missingWorldReferencesCannotValidateEachOther() {
         assertFalse(VaultChallengeTickGuard.canTick(null, null, null, false, false));
     }
+
+    @Test
+    public void pinnedVaultBuildArmsTheGuardSilently() {
+        assertFalse(VaultChallengeTickGuard.disarmedWarning(VaultChallengeTickGuard.TARGET_VAULT_VERSION).isPresent());
+    }
+
+    @Test
+    public void vaultUpdateDisarmsTheGuardWithAWarningNamingBothBuilds() {
+        String warning = VaultChallengeTickGuard.disarmedWarning("1.18.2-3.22.0.7000").orElseThrow();
+        assertTrue(warning.contains("DISABLED"));
+        assertTrue(warning.contains(VaultChallengeTickGuard.TARGET_VAULT_VERSION));
+        assertTrue(warning.contains("1.18.2-3.22.0.7000"));
+    }
+
+    @Test
+    public void missingVaultModStillWarnsRatherThanArmingQuietly() {
+        String warning = VaultChallengeTickGuard.disarmedWarning("not-installed").orElseThrow();
+        assertTrue(warning.contains("running not-installed"));
+    }
+
+    @Test
+    public void nullVaultVersionIsTreatedAsDisarmed() {
+        assertTrue(VaultChallengeTickGuard.disarmedWarning(null).isPresent());
+    }
 }

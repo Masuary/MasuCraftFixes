@@ -6,9 +6,15 @@ This is a trimmed-down variant of the MasuCraft `main` branch. It contains only 
 
 ## Build
 
-Requires Java 17 (system default is Java 21, so use `JAVA_HOME="C:/Program Files/Java/jdk-17"` when building):
+Requires Java 17 (system default is Java 21, so set `JAVA_HOME` when building):
 ```bash
-JAVA_HOME="C:/Program Files/Java/jdk-17" ./gradlew build
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk ./gradlew build
+```
+`gradlew` here has CRLF line endings, so if the shell refuses to run it, launch the wrapper
+through its jar instead:
+```bash
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk /usr/lib/jvm/java-17-openjdk/bin/java \
+  -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain build
 ```
 
 Output JAR: `build/libs/masucraftfixes-wolds-<version>.jar`.
@@ -32,15 +38,9 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 | Mixin | Target | Purpose |
 |---|---|---|
 | `AngelExpertiseMixin` | `AngelExpertise` (The Vault) | Prevents angel expertise from stripping FTB `/fly` flight outside vaults while preserving the operator bypass |
-| `ArrayAdapterMigrationSafetyMixin` | `ArrayAdapter` (The Vault) | Bounds object-array allocation while legacy snapshots are being migrated |
-| `ByteArrayAdapterMigrationSafetyMixin` | `ByteArrayAdapter` (The Vault) | Bounds byte-array allocation while legacy snapshots are being migrated |
 | `FTBCheatCommandsMixin` | `CheatCommands` (FTB Essentials) | Blocks `/fly` inside vault dimensions |
-| `IntArrayAdapterMigrationSafetyMixin` | `IntArrayAdapter` (The Vault) | Bounds integer-array allocation while legacy snapshots are being migrated |
-| `LongArrayAdapterMigrationSafetyMixin` | `LongArrayAdapter` (The Vault) | Bounds long-array allocation while legacy snapshots are being migrated |
 | `ServerPlayerMixin` | `ServerPlayer` | Disables active FTB flight inside vault dimensions each tick |
 | `VaultChallengeTickGuardMixin` | `ChallengeManager` (The Vault) | Prevents stale server-tick callbacks from accessing unloaded, replaced, detached, or deletion-marked worlds |
-| `VaultSnapshotV166CompatibilityMixin` | `VaultSnapshot` (The Vault) | Promotes fully decoded legacy snapshots during the one-time v1_67 disk migration |
-| `WoldsFloatListAdapterMigrationSafetyMixin` | `ElixirBreakpointMap.FloatListAdapter` (Wolds Vaults) | Bounds elixir float-list allocation while legacy snapshots are being migrated |
 
 The three FTB Essentials flight mixins are applied only when `ftbessentials` is loaded. They use FTB's persisted `fly` flag as the flight-ownership signal and leave other flight providers to their own compatibility logic.
 
@@ -80,7 +80,11 @@ I/O failures disable diagnostics until restart with a contextual main-log error,
 but must not change the challenge guard's decision.
 
 START reports version eligibility, while CALLBACK_OBSERVED proves the injected
-callback ran. A required TAIL injection into base `ChallengeManager.onDetach`
+callback ran. Since 1.8.0 `VaultChallengeGuardMonitor.warnIfGuardDisarmed` also emits a
+main-log WARN naming both versions when the installed Vault build is not
+`VaultChallengeTickGuard.TARGET_VAULT_VERSION`, so a Vault update cannot disarm the guard
+with only a status string inside the guard's own file. On the live network the guard blocks
+stale ticks daily, so that silence was the real risk. A required TAIL injection into base `ChallengeManager.onDetach`
 emits DETACHED only for previously blocked managers and clears diagnostic state.
 It proves base listener cleanup, not completion of subclass cleanup or disk saves.
 The existing main-log stale-world warning is retained. No active world references
@@ -91,41 +95,15 @@ Test-only `log4j2-test.xml` avoids initializing Forge's terminal/file appenders
 inside the noninteractive test worker; it is not packaged in the mod JAR.
 These checks do not replace verification on the affected dedicated server.
 
-### Legacy Vault snapshot migration
+### Legacy Vault snapshot migration (retired in 1.8.0)
 
-The v1_66 compatibility reader is restricted to The Vault
-`1.18.2-3.21.6.6884`. Before normal world loading, MasuCraftFixes atomically
-converts active Vault records and historical snapshots from build 6573's
-ambiguous v1_66 schema to the standard v1_67 schema. Original files are kept
-under `world/data/masucraftfixes-v166-backup`, and completion is recorded in
-`world/data/masucraftfixes-v166-to-v167.properties`. After conversion, the
-native v1_67 schema is restored before Vault loads the world normally. Wolds
-contains snapshots from multiple schema generations that share the v1_66
-version number, so IDs already present in Vault's persisted corruption
-quarantine and IDs referenced by a renamed
-`the_vault_VaultSnapshots.dat.old` manifest are tested against the build 6573,
-transitional late-v1_66, expanded add-on, and native build 6884 layouts. Old
-references are prepended to the regenerated manifest while every current
-reference remains authoritative later in the list. Recovery temporarily restores
-historical Wolds objective suppliers and Unobtainium barrel/chest statistic
-fields that newer add-on builds removed, plus v1_67-only fields registered by
-server add-ons in the affected nested Vault data types. Each successful
-candidate must consume the complete source bit stream, be normalized through
-the native v1_67 registries, produce an unambiguous result, and reach a stable
-native v1_67 decode/re-encode fixed point before its original is backed up and
-atomically replaced.
-
-Native-compatible, unreferenced v1_66 snapshot files remain unchanged.
-Successfully migrated IDs are removed from quarantine, while referenced files
-that cannot be decoded, are missing, or have ambiguous results remain preserved
-and quarantined. Migration-only bounds on Vault primitive/object arrays and the
-Wolds elixir float-list adapter prevent malformed schema candidates from
-exhausting the heap without changing normal runtime decoding. Marker format 6
-makes servers that ran an earlier migration import and recover the old manifest
-once, then makes later boots idempotent. Unexpected NBT,
-backup, write, and verification failures still stop startup. Vault's
-`the_vault_VaultSnapshots.dat` manifest and segmented snapshot files use
-uncompressed NBT, unlike standard compressed Forge `SavedData` files.
+The one-time v1_66 to v1_67 migration, its five array/float-list safety mixins, the
+`VaultSnapshotV166CompatibilityMixin`, and the `vaultDataCompatibility` config section were removed in
+1.8.0. The key `enableLegacy6573V166Compatibility` was `false` on all six live backends, so the code
+had been inert in production; the Sky line retired the same machinery in its 1.7.0. The mod no longer
+registers a COMMON config spec at all, so an existing `config/masucraftfixes-common.toml` is simply
+left orphaned rather than rewritten. See `RELEASE_1.8.0.md`, and the git history before 1.8.0 if the
+migration ever has to be revived.
 
 ## LuckPerms Permissions
 

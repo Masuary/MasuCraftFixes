@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Set;
 
 public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
-    private static final String TARGET_VAULT_VERSION = "1.18.2-3.21.6.6884";
     private static final Set<String> FTB_ESSENTIALS_MIXINS = Set.of(
             "com.masuary.masucraftfixes.mixin.AngelExpertiseMixin",
             "com.masuary.masucraftfixes.mixin.FTBCheatCommandsMixin",
@@ -24,15 +23,6 @@ public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
             "com.masuary.masucraftfixes.mixin.CasinoCraftMessageStartServerHandlerMixin",
             "com.masuary.masucraftfixes.mixin.CasinoCraftMessageStateServerHandlerMixin"
     );
-    private static final Set<String> VAULT_6884_MIGRATION_MIXINS = Set.of(
-            "com.masuary.masucraftfixes.mixin.ArrayAdapterMigrationSafetyMixin",
-            "com.masuary.masucraftfixes.mixin.ByteArrayAdapterMigrationSafetyMixin",
-            "com.masuary.masucraftfixes.mixin.IntArrayAdapterMigrationSafetyMixin",
-            "com.masuary.masucraftfixes.mixin.LongArrayAdapterMigrationSafetyMixin",
-            "com.masuary.masucraftfixes.mixin.VaultSnapshotV166CompatibilityMixin"
-    );
-    private static final String WOLDS_FLOAT_LIST_MIGRATION_MIXIN =
-            "com.masuary.masucraftfixes.mixin.WoldsFloatListAdapterMigrationSafetyMixin";
     private static final String VAULT_CHALLENGE_TICK_GUARD_MIXIN =
             "com.masuary.masucraftfixes.mixin.VaultChallengeTickGuardMixin";
 
@@ -55,16 +45,8 @@ public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
             return isModLoaded("casinocraft");
         }
 
-        if (VAULT_6884_MIGRATION_MIXINS.contains(mixinClassName)) {
-            return isModVersion("the_vault", TARGET_VAULT_VERSION);
-        }
-
         if (VAULT_CHALLENGE_TICK_GUARD_MIXIN.equals(mixinClassName)) {
             return isModVersion("the_vault", VaultChallengeTickGuard.TARGET_VAULT_VERSION);
-        }
-
-        if (WOLDS_FLOAT_LIST_MIGRATION_MIXIN.equals(mixinClassName)) {
-            return isModLoaded("woldsvaults") && isModVersion("the_vault", TARGET_VAULT_VERSION);
         }
 
         return true;

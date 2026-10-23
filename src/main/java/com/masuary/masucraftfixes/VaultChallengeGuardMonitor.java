@@ -16,10 +16,12 @@ public final class VaultChallengeGuardMonitor {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         closeLog();
+        String vaultVersion = installedVersion("the_vault");
         diagnosticLog = new VaultChallengeGuardLog(LOG_PATH, "5 MB", 3,
                 (message, exception) -> MasuCraftFixes.LOGGER.error(message, exception));
         diagnostics = new VaultChallengeGuardDiagnostics(diagnosticLog, System::nanoTime,
-                installedVersion("masucraftfixes"), installedVersion("the_vault"));
+                installedVersion("masucraftfixes"), vaultVersion);
+        VaultChallengeTickGuard.disarmedWarning(vaultVersion).ifPresent(MasuCraftFixes.LOGGER::warn);
     }
 
     @SubscribeEvent

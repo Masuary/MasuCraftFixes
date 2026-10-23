@@ -42,9 +42,12 @@ Remove, with the config key:
 default is `true`, so this was a deliberate operator decision on every server. The Sky line retired the
 same machinery in its 1.7.0. Runtime behaviour after removal is identical to today.
 
-**Operational note:** wolf's six config files still contain the key. Forge drops an unknown key and
-rewrites the file on first boot, so expect the key to disappear from those configs. Nothing to do, but
-do not mistake it for the config being reset.
+**Operational note (corrected during implementation):** the config class held nothing but this key, so
+`MasuCraftFixesConfig` and the `registerConfig(ModConfig.Type.COMMON, ...)` call are gone too. The mod
+no longer registers a COMMON spec at all, which means Forge does not touch
+`config/masucraftfixes-common.toml`: wolf's six existing files are left orphaned on disk rather than
+rewritten. Harmless, and they can be deleted with the other cleanup. The earlier note in this spec said
+Forge would rewrite them, which was only true if an empty spec stayed registered.
 
 ## 2. Keep the Vault challenge guard, and make its failure loud
 

@@ -6,8 +6,6 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "AngelExpertiseMixin",
-    "ArrayAdapterMigrationSafetyMixin",
-    "ByteArrayAdapterMigrationSafetyMixin",
     "CasinoCraftBlockEntityMachineMixin",
     "CasinoCraftMenuProviderMixin",
     "CasinoCraftMessageInventoryServerHandlerMixin",
@@ -17,12 +15,8 @@
     "CasinoCraftMessageStartServerHandlerMixin",
     "CasinoCraftMessageStateServerHandlerMixin",
     "FTBCheatCommandsMixin",
-    "IntArrayAdapterMigrationSafetyMixin",
-    "LongArrayAdapterMigrationSafetyMixin",
     "ServerPlayerMixin",
-    "VaultChallengeTickGuardMixin",
-    "VaultSnapshotV166CompatibilityMixin",
-    "WoldsFloatListAdapterMigrationSafetyMixin"
+    "VaultChallengeTickGuardMixin"
   ],
   "injectors": {
     "maxShiftBy": 10,
