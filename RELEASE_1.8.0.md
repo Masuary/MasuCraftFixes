@@ -100,9 +100,43 @@ include a deliberate attempt to break it (`/vesselantiafk debug true` for tracin
   damage and strands it deliberately)
 - look for a path that still completes the AFK exploit
 
-Decide retire-versus-fix from what QA finds. If it has to be retired, the durable fix belongs in
-`wolds-vaults-official-mod` where the arena bounds live, not in a mod cancelling damage from outside,
-so that outcome comes with a written exploit report for wolf rather than a silent removal.
+Decide retire-versus-fix from what QA finds. If it has to be retired, write the exploit up for wolf
+rather than removing it silently. The Vessel is Vault Hunters' own boss (`the_vault:the_vessel`,
+`iskallia.vault.entity.boss.TheVesselEntity`), so the arena is not wolf's code; his mod is still a
+reasonable home for a durable fix because it already mixes into the Vessel
+(`MixinGreedVesselEntity`). (Corrected 2026-10-23: an earlier version said the arena bounds live in
+`wolds-vaults-official-mod`.)
+
+### Console-stage results (2026-10-23, IRIS test copy, 1.8.0, Forge 40.3.11)
+
+Driven from the server console with `/vesselantiafk debug true`; no client needed.
+
+| Test | Result |
+|---|---|
+| Void rescue: summoned on an arena platform, teleported to y=-140 | **pass**: "fell out of arena (Y=-140.0), rescued back to (10000.5,101.0,10000.5) and damage cancelled" |
+| Restart persistence: moved 7 blocks off its anchor, saved, full restart, voided from the new spot | **pass**: "restored from NBT: anchor=(10000.5,101.0,10000.5)", then rescued to the *original* anchor, not where it stood at restart |
+| Cleanup | **pass**: on death, "left world permanently (reason=KILLED, all state dropped)", so the tracking maps do not leak |
+| Environmental damage: lava, fire (`Fire:400s`), buried in stone | **immune**: health stayed `1.0E7`, and no damage event fired, so nothing stamps engagement |
+
+What the bytecode of `TheVesselEntity` on VH 6884 explains:
+
+- `hurt()` ignores everything except player attacks (25% dodge while it is not attacking) and
+  `DamageSource.OUT_OF_WORLD`. **The void is the only passive way a Vessel can die**, which is exactly
+  the path VesselAntiAfk closes. An environmental trap cannot kill it, and cannot reset the pull timer
+  either, because ignored damage never reaches Forge's damage events. The suspected exploit (a trap
+  that keeps "engagement" fresh while the player AFKs) does not exist.
+- `kill()` is overridden to `setHealth(1.0F)`: `/kill` reports "Killed The Vessel" but leaves it on
+  1 HP, independent of VesselAntiAfk. **To remove a stuck Vessel, an admin uses
+  `/data merge entity <vessel> {Health:0f}`** (verified: it dies and VesselAntiAfk drops its state).
+- Health is `1.0E7` on a bare summon; a real Greed fight sets it from `GreedConfig$VesselConfig`.
+
+**Still to test, and it needs a CMA client:** the player-side behaviour, which is where "not working
+great" most likely lives because it is the part players notice: the pull timer (`TIMEOUT_TICKS` 6000,
+target more than 12 blocks away teleports the player onto the Vessel), the lost-target pull
+(`LOST_TARGET_TIMEOUT_TICKS` 2400), the teleport-jump filter (`MAX_LEGIT_MOVE_SQ`), and the Soul Tether
+engagement path (`target.hurtTime > 0`). Candidate weak spots to probe: a player standing just inside
+the 12-block radius out of the Vessel's reach (the pull never fires), and whether a real Greed-vault
+fight behaves like a bare summon at all.
 
 ## 4. Nothing ported from the Sky line
 
