@@ -138,6 +138,35 @@ engagement path (`target.hurtTime > 0`). Candidate weak spots to probe: a player
 the 12-block radius out of the Vessel's reach (the pull never fires), and whether a real Greed-vault
 fight behaves like a bare summon at all.
 
+### Player-side results (2026-10-23, IRIS test copy with the full Wolds drop, CMA client, bare summon)
+
+Masuary in survival with Resistance 255 against a summoned Vessel in a fenced bedrock arena at y=200;
+trace in `/mnt/data/AI/work/wolds-vessel-hunt-2026-10-23/vessel-antiafk-trace.log`.
+
+| Test | Result |
+|---|---|
+| Lost-target pull: player 36 blocks away, the Vessel drops the target | **pass**: "Pulled Masuary back to Vessel ... after 120s without target", onto the Vessel |
+| Void rescue on a real fall: the Vessel jumped its 2-block fence toward the player and fell | **pass**, twice: "fell out of arena (Y=-129.1 / -131.4), rescued back to (20003.5,200.0,20003.5)" |
+| Teleport filter | **pass**: player and Vessel jumps of 330-400 blocks logged as "teleport filtered, no stamp" |
+| Player 17-23 blocks away, out of melee reach | the Vessel hits at range (0 damage under Resistance), every hit stamps engagement: a real fight, no pull needed |
+| Player sealed in a bedrock box 9.6 blocks away | the Vessel still dealt damage into the box and the player ended up outside it, falling into the void (cause is VH's; no pull was logged). Inside 12 blocks the timer is gated by design |
+| **The 5-minute pull (`TIMEOUT_TICKS`)** | **never fires while the Vessel has a target.** Every timer snapshot showed `sinceEngagement=0s`, at every distance up to 75 blocks |
+
+Why the 5-minute pull is dead: VH's targeting re-calls `setTarget` with the same player several times a
+second (15 `acquired target` events in 1.6 s at 20:43:59, same player, same spot, before the first hit at
+20:44:19), Forge fires `LivingChangeTargetEvent` each time, and `onTargetChanged` stamps
+`lastEngagementTick` on every one. So only the lost-target pull (120 s without a target) ever moves a
+player, and a player who keeps the Vessel's target lock without fighting is never pulled. That is the
+most likely meaning of "not working great".
+
+Not tested: a real Greed-vault fight (VH's Greed config sets health and may change targeting), and Soul
+Tether. Neither is needed for the decision below.
+
+Decision for the owner: **fix in 1.8.1** (recommended): stamp in `onTargetChanged` only when the new
+target differs from `Mob.getTarget()`, so the 5-minute timer measures hits and movement as intended,
+then repeat this run. Retiring the class instead would also drop the two parts that demonstrably work
+(void rescue, lost-target pull).
+
 ## 4. Nothing ported from the Sky line
 
 | Sky item | Decision |
