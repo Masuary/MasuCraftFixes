@@ -22,7 +22,11 @@ on `panel.masucraft.eu`. Installed `masucraftfixes-wolds` per backend:
 | US Zest | 1.6.3 | absent |
 
 Zest's 1.7.x jars are present but renamed `.jar.old`, so it has been running six releases behind the
-rest. 1.8.0 is a 1.6.3 -> 1.8.0 jump there.
+rest. 1.8.0 is a 1.6.3 -> 1.8.0 jump there, and it brings more than the guard: comparing the live
+1.6.3 jar with 1.8.0, Zest also gains four CasinoCraft blackjack audit handlers (`CasinoCraftMessage`
+Player/Score/Start/State `ServerHandlerMixin`) and `FtbEssentialsFlightCompatibility`. The Hub (1.7.8)
+gains the guard and loses only `VaultSnapshotV166CompatibilityMixin`; Myth, NOVA and VOID (1.7.10) gain
+the guard and lose the six v1_66 mixins; IRIS (1.7.12) gains only the mismatch warning.
 
 ## 1. Retire the Vault `v1_66` migration
 
