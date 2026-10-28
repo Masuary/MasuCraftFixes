@@ -26,21 +26,14 @@ masucraftfixes-wolds
 
 ## Main Features
 
-- Vessel anti-AFK safeguards.
 - Server-only guard against challenge ticks accessing unloaded or deletion-marked vault worlds on VH build `6884`. Native VH cleanup handles stale challenge records; no world-data wipe is required. The guard arms only on its pinned VH build and logs a `WARN` at startup when the installed build no longer matches, so a VH update cannot disarm it quietly.
 - LuckPerms player-limit bypass tag.
 - FTB Essentials `/fly` compatibility with Angel Blocks, while retaining the vault flight restriction.
 - Optional CasinoCraft mixins, only applied when CasinoCraft is loaded.
 
-## Other Commands
-
-```text
-/vesselantiafk debug true|false
-```
-
 ## Monitoring the Vault challenge guard
 
-Version `1.8.0` creates `logs/masucraftfixes-vault-challenge-guard.log` on server
+Version `1.8.0` and newer create `logs/masucraftfixes-vault-challenge-guard.log` on server
 startup. No configuration or client update is required. From the server folder:
 
 ```bash
@@ -77,8 +70,6 @@ writer until restart without changing guard behavior.
 
 - `src/main/java/com/masuary/masucraftfixes/MasuCraftFixes.java`
 - `src/main/java/com/masuary/masucraftfixes/EventHandler.java`
-- `src/main/java/com/masuary/masucraftfixes/VesselAntiAfk.java`
-- `src/main/java/com/masuary/masucraftfixes/VesselAntiAfkCommand.java`
 - `src/main/resources/mixins.masucraftfixes.json`
 
 ## Dependencies

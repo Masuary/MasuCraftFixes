@@ -84,7 +84,10 @@ NOVA and VOID are the vault-running backends, so this is the main functional gai
 condition IRIS logs daily is currently happening unguarded there. The Hub hosts no vaults, so the guard
 is inert there.
 
-## 3. VesselAntiAfk: keep, and hunt it during QA
+## 3. VesselAntiAfk: kept in 1.8.0, retired in 1.8.1
+
+**Outcome (2026-10-28):** the owner retired the whole feature after the QA below. See `RELEASE_1.8.1.md`,
+which also writes up the exploit this reopens. The rest of this section is the QA that led to that decision.
 
 Keep `VesselAntiAfk` and `VesselAntiAfkCommand` in 1.8.0. It is the Greed-boss anti-exploit: it anchors
 the Vessel's arena spawn on `EntityJoinWorldEvent`, persists the anchor in entity NBT, and cancels
@@ -162,10 +165,10 @@ most likely meaning of "not working great".
 Not tested: a real Greed-vault fight (VH's Greed config sets health and may change targeting), and Soul
 Tether. Neither is needed for the decision below.
 
-Decision for the owner: **fix in 1.8.1** (recommended): stamp in `onTargetChanged` only when the new
-target differs from `Mob.getTarget()`, so the 5-minute timer measures hits and movement as intended,
-then repeat this run. Retiring the class instead would also drop the two parts that demonstrably work
-(void rescue, lost-target pull).
+Decision taken (owner, 2026-10-28): **retire the feature** rather than fix the stamping. 1.8.1 removes
+`VesselAntiAfk` and `VesselAntiAfkCommand`; `RELEASE_1.8.1.md` records what that reopens for wolf. The
+alternative on the table was a one-line fix (stamp in `onTargetChanged` only when the new target differs
+from `Mob.getTarget()`), which would have kept the void rescue and the lost-target pull.
 
 ## 4. Nothing ported from the Sky line
 
