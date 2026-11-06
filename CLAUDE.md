@@ -9,7 +9,7 @@ Requires Java 17 (the system default may be Java 21):
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk PATH=/usr/lib/jvm/java-17-openjdk/bin:$PATH ./gradlew build
 ```
 
-Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.8.0`).
+Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.8.1`).
 
 ## Package Structure
 
@@ -50,12 +50,13 @@ Vault Hunters keeps a vault world (`the_vault:vault_<uuid>`, listed in
 players indefinitely. A Vault Hunters update that cannot read `the_vault_Vaults.dat`
 (6872 to 6938) leaves every such world without a vault. `AbandonedVaults.cleanUp` runs on
 `ServerStartedEvent`:
-- closes a running vault through `VaultUtils.closeVault` when every listener is offline
-  and their `world/playerdata/<uuid>.dat` is older than `ABANDONED_AFTER` (7 days);
 - marks every vault world without a running vault for deletion, so Vault Hunters'
   own `tickDeletions` removes the registry entry and folder one per tick;
 - deletes `world/dimensions/the_vault/vault_<uuid>/` folders that are not registered.
 Only `vault_<uuid>` names are touched; `vault`, `the_other_side` and `arena` are permanent.
+Running vaults are never closed (owner 2026-11-06, v1.8.1): the 7-day close of vaults whose players stayed
+away was removed, because it also closed every vault without listeners, i.e. the vaults Immersive Portals for
+Vault Hunters creates when a hub frame is lit (they wait for their first runner).
 
 `PlayerListMixin` modifies the stored dimension key in `placeNewPlayer`: a player whose
 saved world is a vault world that is missing, marked for deletion or has no running vault

@@ -2,6 +2,12 @@
 
 ## Completed
 
+### Running vaults are never closed (2026-11-06, v1.8.1)
+Owner decision: the 7-day close of running vaults (`closeAbandonedVaults`, v1.8.0) is removed. A vault without
+listeners counted as abandoned, so it closed every vault Immersive Portals for Vault Hunters creates when a hub frame
+is lit (a preview that waits for its first runner) at the next startup. Worlds without a vault, unregistered folders
+and the dead-vault login rescue stay.
+
 ### Abandoned Vault Worlds (2026-10-14, v1.8.0)
 **Problem:** Vault Hunters keeps every vault world loaded until its vault ends, and a vault
 waits for its players indefinitely. MAIN held 23 vault worlds (442 MB), each with a player
