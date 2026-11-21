@@ -7,7 +7,6 @@ import net.minecraft.network.protocol.game.ServerboundSetCommandBlockPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCommandMinecartPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraftforge.fml.ModList;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -38,7 +37,7 @@ public abstract class CommandBlockEditMixin {
 
     @Unique
     private void masucraftfixes$denyCommandBlockEditWithoutPermission(CallbackInfo callbackInfo) {
-        if (!ModList.get().isLoaded("luckperms") || LuckPermsAccess.canEditCommandBlocks(player)) {
+        if (LuckPermsAccess.canEditCommandBlocks(player)) {
             return;
         }
         player.sendMessage(new TextComponent("You don't have permission to edit command blocks.")

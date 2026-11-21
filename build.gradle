@@ -56,27 +56,44 @@ minecraft {
 
 repositories {
     mavenCentral()
-    maven { url "https://cursemaven.com" }
+    maven {
+        // CurseMaven: any CurseForge file as curse.maven:<slug>-<projectId>:<fileId>.
+        name = 'CurseMaven'
+        url = 'https://cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
 }
+
+// cursemaven-helper:start
+// Mod dependencies come from CurseForge through CurseMaven, so anyone can build this mod.
+// To build against a local jar while developing, pass its path: -Pvault_jar=path/to/the_vault.jar
+// (or set it in ~/.gradle/gradle.properties). Never commit an override.
+def modDep = { String property, String coordinate ->
+    def local = findProperty(property)
+    if (local) {
+        def localJar = file(local)
+        if (!localJar.isFile()) throw new GradleException("-P${property}=${local} does not exist")
+        return fg.deobf(files(localJar))
+    }
+    return fg.deobf(coordinate)
+}
+// cursemaven-helper:end
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.18.2-40.3.11'
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
-    implementation fg.deobf("curse.maven:autoreglib-250363:3642382")
-    implementation fg.deobf("curse.maven:quark-243121:3840125")
-    implementation fg.deobf(files("deps/luckperms-forge.jar"))
-    implementation fg.deobf(files("deps/the_vault-1.18.2-22.0.0-remastered.7209.jar"))
-    implementation 'net.luckperms:api:5.4'
-    implementation fg.deobf("curse.maven:ftbessentials-410811:4462414")
-
-    compileOnly fg.deobf("curse.maven:botania-225643:3936568")
-    compileOnly fg.deobf("curse.maven:refined-storage-243076:4902316")
+    implementation modDep('vault_jar', "curse.maven:vault-hunters-official-mod-458203:${vault_hunters_file}")
+    implementation modDep('autoreglib_jar', "curse.maven:autoreglib-250363:${autoreglib_file}")
+    implementation modDep('quark_jar', "curse.maven:quark-243121:${quark_file}")
+    implementation modDep('ftb_essentials_jar', "curse.maven:ftb-essentials-410811:${ftb_essentials_file}")
+    compileOnly modDep('botania_jar', "curse.maven:botania-225643:${botania_file}")
+    compileOnly modDep('refined_storage_jar', "curse.maven:refined-storage-243076:${refined_storage_file}")
+    compileOnly 'net.luckperms:api:5.4'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
-    compileOnly fg.deobf("curse.maven:luckperms-431733:3807269")
 }
 
 mixin {
