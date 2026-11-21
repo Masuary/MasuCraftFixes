@@ -8,12 +8,10 @@
     "AngelFlightMixin",
     "CommandBlockEditMixin",
     "FTBCheatCommandsMixin",
-    "IskalliaDevsMixin",
     "ModifyCrystalSuggestionsMixin",
     "OrechidIgnemMixin",
     "PickarangMixin",
     "PlayerListMixin",
-    "RewardMixin",
     "ServerPlayerMixin"
   ],
   "injectors": {

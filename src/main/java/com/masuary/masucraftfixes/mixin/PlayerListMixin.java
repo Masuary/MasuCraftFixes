@@ -1,6 +1,6 @@
 package com.masuary.masucraftfixes.mixin;
 
-import com.masuary.masucraftfixes.AbandonedVaults;
+import com.masuary.masucraftfixes.DeadVaultRescue;
 import net.minecraft.network.Connection;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -26,6 +26,6 @@ public abstract class PlayerListMixin {
         if (!ModList.get().isLoaded("the_vault")) {
             return dimension;
         }
-        return AbandonedVaults.rescueFromDeadVault(server, player, dimension);
+        return DeadVaultRescue.rescueFromDeadVault(server, player, dimension);
     }
 }
