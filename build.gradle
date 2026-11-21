@@ -11,7 +11,6 @@ buildscript {
 
 plugins {
     id 'eclipse'
-    id 'maven-publish'
 }
 
 apply plugin: 'net.minecraftforge.gradle'
@@ -33,7 +32,6 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', 'masucraftfixes'
             arg "-mixin.config=mixins.masucraftfixes.json"
             mods {
                 masucraftfixes {
@@ -46,20 +44,7 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', 'masucraftfixes'
             arg "-mixin.config=mixins.masucraftfixes.json"
-            mods {
-                masucraftfixes {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        data {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            args '--mod', 'masucraftfixes', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
             mods {
                 masucraftfixes {
                     source sourceSets.main
@@ -68,8 +53,6 @@ minecraft {
         }
     }
 }
-
-sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
     maven { url "https://cursemaven.com" }
@@ -94,8 +77,6 @@ dependencies {
 mixin {
     add sourceSets.main, 'mixins.masucraftfixes.refmap.json'
     config 'mixins.masucraftfixes.json'
-    debug.verbose = true
-    debug.export = true
 }
 
 jar {
@@ -108,8 +89,6 @@ jar {
                 "Implementation-Version"  : project.jar.archiveVersion,
                 "Implementation-Vendor"   : "masuary",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-                "TweakClass"              : "org.spongepowered.asm.launch.MixinTweaker",
-                "TweakOrder"              : 0,
                 "MixinConfigs"            : "mixins.masucraftfixes.json"
         ])
     }
@@ -119,15 +98,7 @@ jar {
 
 jar.finalizedBy('reobfJar')
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            artifact jar
-        }
-    }
-    repositories {
-        maven {
-            url "file://${project.projectDir}/mcmodsrepo"
-        }
-    }
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xlint:all,-processing', '-Werror']
 }

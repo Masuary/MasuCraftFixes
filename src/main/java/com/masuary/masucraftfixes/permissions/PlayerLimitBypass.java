@@ -1,4 +1,4 @@
-package com.masuary.masucraftfixes;
+package com.masuary.masucraftfixes.permissions;
 
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
@@ -8,7 +8,7 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 
-public class EventHandler {
+public class PlayerLimitBypass {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
@@ -20,7 +20,7 @@ public class EventHandler {
             return;
         }
 
-        if (LuckPermsInt.doesIgnoreLimit(serverPlayer)) {
+        if (LuckPermsAccess.doesIgnoreLimit(serverPlayer)) {
             serverPlayer.addTag("ignores_player_limit");
             return;
         }

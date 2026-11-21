@@ -1,5 +1,6 @@
-package com.masuary.masucraftfixes;
+package com.masuary.masucraftfixes.permissions;
 
+import com.masuary.masucraftfixes.MasuCraftFixes;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.cacheddata.CachedPermissionData;
 import net.luckperms.api.platform.PlayerAdapter;
@@ -7,10 +8,16 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
 
-public class LuckPermsInt {
+public final class LuckPermsAccess {
+
+    public static final String COMMAND_BLOCK_EDIT_PERMISSION = "masucraftfixes.commandblock.edit";
+    public static final String IGNORES_PLAYER_LIMIT_PERMISSION = "masucraftfixes.ignores_player_limit";
+
+    private LuckPermsAccess() {
+    }
 
     public static boolean doesIgnoreLimit(ServerPlayer player) {
-        Optional<Boolean> ignoresLimit = permissionIfAvailable(player, "masucraftfixes.ignores_player_limit");
+        Optional<Boolean> ignoresLimit = permissionIfAvailable(player, IGNORES_PLAYER_LIMIT_PERMISSION);
         if (ignoresLimit.isEmpty()) {
             MasuCraftFixes.LOGGER.debug("LuckPerms data unavailable for {}, allowing login", player.getGameProfile().getName());
         }
@@ -18,7 +25,7 @@ public class LuckPermsInt {
     }
 
     public static boolean canEditCommandBlocks(ServerPlayer player) {
-        return permissionIfAvailable(player, "masucraftfixes.commandblock.edit").orElse(false);
+        return permissionIfAvailable(player, COMMAND_BLOCK_EDIT_PERMISSION).orElse(false);
     }
 
     /**

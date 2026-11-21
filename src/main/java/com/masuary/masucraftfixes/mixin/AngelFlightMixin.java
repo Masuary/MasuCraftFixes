@@ -1,6 +1,6 @@
 package com.masuary.masucraftfixes.mixin;
 
-import dev.ftb.mods.ftbessentials.util.FTBEPlayerData;
+import com.masuary.masucraftfixes.flight.FtbFlight;
 import iskallia.vault.world.AngelFlight;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
@@ -14,11 +14,8 @@ public class AngelFlightMixin {
 
     @Inject(method = "onPlayerTick", at = @At("HEAD"), cancellable = true)
     private static void skipAngelFlightWhenFtbFlyActive(TickEvent.PlayerTickEvent event, CallbackInfo callbackInfo) {
-        if (event.player instanceof ServerPlayer serverPlayer) {
-            FTBEPlayerData data = FTBEPlayerData.get(serverPlayer);
-            if (data != null && data.fly) {
-                callbackInfo.cancel();
-            }
+        if (event.player instanceof ServerPlayer serverPlayer && FtbFlight.isActive(serverPlayer)) {
+            callbackInfo.cancel();
         }
     }
 }

@@ -1,25 +1,18 @@
 package com.masuary.masucraftfixes;
 
+import com.masuary.masucraftfixes.permissions.PlayerLimitBypass;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.launch.MixinBootstrap;
 
-@Mod("masucraftfixes")
+@Mod(MasuCraftFixes.MOD_ID)
 public class MasuCraftFixes {
 
+    public static final String MOD_ID = "masucraftfixes";
     public static final Logger LOGGER = LogManager.getLogger();
 
     public MasuCraftFixes() {
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
-        MinecraftForge.EVENT_BUS.register(new EventHandler());
-        LOGGER.info("MasuCraftFixes initialized");
-    }
-
-    private void setup(final FMLCommonSetupEvent event) {
-        MixinBootstrap.init();
+        MinecraftForge.EVENT_BUS.register(new PlayerLimitBypass());
     }
 }

@@ -1,6 +1,6 @@
 package com.masuary.masucraftfixes.mixin;
 
-import com.masuary.masucraftfixes.DeadVaultRescue;
+import com.masuary.masucraftfixes.vault.DeadVaultRescue;
 import net.minecraft.network.Connection;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;

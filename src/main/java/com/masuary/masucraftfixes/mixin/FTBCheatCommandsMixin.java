@@ -1,5 +1,6 @@
 package com.masuary.masucraftfixes.mixin;
 
+import com.masuary.masucraftfixes.vault.VaultDimensions;
 import dev.ftb.mods.ftbessentials.command.CheatCommands;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,13 +13,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class FTBCheatCommandsMixin {
 
     @Inject(method = "fly", at = @At("HEAD"), cancellable = true)
-    private static void blockFlyInVault(ServerPlayer player, CallbackInfoReturnable<Integer> cir) {
-        if (player.hasPermissions(4)) return;
-
-        String dimension = player.level.dimension().location().toString();
-        if (dimension.toLowerCase().contains("the_vault:vault")) {
+    private static void blockFlyInVault(ServerPlayer player, CallbackInfoReturnable<Integer> callbackInfo) {
+        if (!player.hasPermissions(4) && VaultDimensions.isVaultWorld(player.level)) {
             player.displayClientMessage(new TextComponent("Flight in the Vaults is not allowed!"), true);
-            cir.setReturnValue(1);
+            callbackInfo.setReturnValue(1);
         }
     }
 }
