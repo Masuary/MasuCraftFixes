@@ -8,10 +8,11 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import java.util.List;
 import java.util.Set;
 
+/** Applies the mixins for an optional mod only when that mod is installed. */
 public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
 
-    private static final String ORECHID_IGNEM_MIXIN =
-            "com.masuary.masucraftfixes.mixin.OrechidIgnemMixin";
+    private static final String ORECHID_IGNEM_MIXIN = "com.masuary.masucraftfixes.mixin.OrechidIgnemMixin";
+    private static final String REFINED_STORAGE_MIXIN_PACKAGE = "com.masuary.masucraftfixes.mixin.refinedstorage.";
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -26,6 +27,9 @@ public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (ORECHID_IGNEM_MIXIN.equals(mixinClassName)) {
             return isModLoaded("botania");
+        }
+        if (mixinClassName.startsWith(REFINED_STORAGE_MIXIN_PACKAGE)) {
+            return isModLoaded("refinedstorage");
         }
         return true;
     }

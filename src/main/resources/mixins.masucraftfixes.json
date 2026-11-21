@@ -11,7 +11,12 @@
     "ModifyCrystalSuggestionsMixin",
     "OrechidIgnemMixin",
     "PickarangMixin",
-    "PlayerListMixin"
+    "PlayerListMixin",
+    "refinedstorage.CraftingManagerMixin",
+    "refinedstorage.NetworkListenerMixin",
+    "refinedstorage.NetworkMixin",
+    "refinedstorage.NetworkNodeGraphMixin",
+    "refinedstorage.NetworkNodeMixin"
   ],
   "server": [
     "DedicatedPlayerListMixin"
