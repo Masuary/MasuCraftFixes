@@ -2,6 +2,40 @@
 
 ## In progress
 
+### Phase R review: fixes, retirements, RSChunkFix merge (2026-11-21, v1.9.0 unchanged)
+Reviews: `/mnt/data/Projects/skyvault-update4-2026-11-20/9-mod-review/findings/10-masucraftfixes.md` and
+`.../19-rschunkfix.md` (evidence, failure scenarios). Sir's decisions (interview 2026-11-21):
+- **Retire the LuckPerms patron system:** "we only did this to use Iskall's patron rewards with LuckPerms; it is not
+  fair". Remove `PatreonPerksHandler`, `LpGrantedModelsData`, `/donatordisplay`, `RewardMixin` + `RewardPermissions`,
+  `IskalliaDevsMixin`, `Transmogs.md`. Review findings B2, B3, F1, F3, F4 are moot.
+- **Retire the startup vault cleanup** (`AbandonedVaults`: marking vault-less worlds, deleting unregistered folders) and
+  the `vaultCleanupQa` source set (B7: either part deletes every running vault if VH's registry fails to load). Keep the
+  `PlayerListMixin` login rescue and match VH (F2): respawn point first, world spawn fallback, gold explanation message.
+- **B1:** LuckPerms player-limit bypass through `DedicatedPlayerList.canBypassPlayerLimit`; post-login count, kick and
+  the `ignores_player_limit` player tag removed.
+- **B4:** vault flight rule moves from `ServerPlayer.tick` (VH worker threads) to a server-thread `PlayerTickEvent`.
+- **B5:** command-block permission check after `PacketUtils.ensureRunningOnSameThread`, one shared body.
+- **B6:** guard `AngelFlight.revoke` instead of cancelling the whole Angel tick.
+- **F5:** `/masucraftfixes status` for staff.
+- **RSChunkFix merged in** (fixed): saved and pending RS crafting tasks are never dropped while a controller chunk is
+  unloaded; a network with an unloaded controller is offline (stock RS meaning) and owes a graph rebuild through RS's
+  own 20-tick path; nodes in unloaded chunks do not tick at all (covers add-on nodes such as Vault Integrations' Altar
+  Conduit); nodes whose chunk loads later reconnect (F1); RS pinned to 1.10.6. Applied only when Refined Storage is
+  loaded. RSChunkFix repo archived (kept in place).
+- **Cleanup:** all five stages (housekeeping, fail fast + shared helpers, package by feature, JUnit tests, clean-clone
+  build via CurseMaven + pinned dependencies).
+**Status:** done 2026-11-21. Commits 9c87e10 (retirements), 2dc8589 (package by feature, helpers, -Werror),
+ff12c94 (B1, B4, B5, B6, F2), 6ec7978 (RSChunkFix merge), b688f5f (status command), 0b875dc (tests), a60787a
+(CurseMaven + pinned mods.toml), 91c0c14 (independent-review fixes: adopt nodes of offline RS networks, cross-dimension
+reconnects, rschunkfix guard, Angel guard), 45b7e62 (reconnect scheduler crash found on the testnet). 14 unit tests,
+curse-maven-fix gate PASS. Testnet: `/mnt/data/AI/work/masucraftfixes-phaseR-2026-11-21/qa/testnet-results.md`
+(base pass reproduced the RS task loss and the dropped graph change; every new check PASS except the Angel guard,
+which was not run in game). Deploy notes: remove `rschunkfix-1.0.0.jar` from every backend (this mod refuses to start
+next to it); the first boot of an existing world logs `Missing data pack mod:rschunkfix` once.
+**Open, outside this mod:** vh-data-exporter 1.1.0 reflects `PlayerDataSyncMod.getTransferManager()`, which the review
+01 PlayerDataSync cleanup removed, so live gear exports pause after every login. The Wolds servers also run
+`rschunkfix-1.0.0.jar` with `masucraftfixes-wolds` (sibling repo, not touched).
+
 ### VH Remastered 4.0.0 (build 7209) for Skyvault Update 4 (2026-11-20, v1.9.0)
 **Problem:** 7209 removed `AngelExpertise.onTick`; flight is now granted and revoked by the Forge handler
 `iskallia.vault.world.AngelFlight.onPlayerTick(PlayerTickEvent)`. The required `AngelExpertiseMixin` fails to apply and
@@ -9,7 +43,8 @@ the server does not boot (`/mnt/data/Projects/skyvault-update4-2026-11-20/2-jar-
 **Plan:** retarget the mixin (renamed `AngelFlightMixin`) to `AngelFlight.onPlayerTick` (static, HEAD, cancellable, skip while FTB `/fly` is on);
 compile against the 7209 jar in `deps/`; version 1.9.0 (7209 only). Deploy deletes the stale 1.8.0 jar too.
 **Not in scope:** hooking `PatreonManager.getActiveTier` so LuckPerms patrons also get 7209's auras and looks.
-**Status (2026-11-20):** code done, `gradlew build` passes against 7209 (uncommitted); in-game check in Skyvault Update 4 phase C (testnet).
+**Status:** done. Committed 4447ef3 (2026-11-20); booted and checked in Skyvault Update 4 phase C (testnet). Refined in
+phase R: the Angel guard now sits on `AngelFlight.revoke` (B6).
 
 ## Completed
 
