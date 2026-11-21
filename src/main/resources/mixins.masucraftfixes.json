@@ -16,6 +16,7 @@
     "refinedstorage.NetworkListenerMixin",
     "refinedstorage.NetworkMixin",
     "refinedstorage.NetworkNodeGraphMixin",
+    "refinedstorage.NetworkNodeGraphOperatorMixin",
     "refinedstorage.NetworkNodeMixin"
   ],
   "server": [

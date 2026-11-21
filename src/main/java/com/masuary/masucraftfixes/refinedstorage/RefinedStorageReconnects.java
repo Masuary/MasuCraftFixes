@@ -26,9 +26,11 @@ public final class RefinedStorageReconnects {
     private RefinedStorageReconnects() {
     }
 
-    public static void schedule(ServerLevel level, INetwork network) {
-        DUE_GAME_TIME_BY_LEVEL.computeIfAbsent(level.dimension(), dimension -> new IdentityHashMap<>())
-                .put(network, level.getGameTime() + SETTLE_TICKS);
+    /** Keyed by the network's own level: a node behind a Network Receiver can sit in another dimension. */
+    public static void schedule(INetwork network) {
+        Level networkLevel = network.getLevel();
+        DUE_GAME_TIME_BY_LEVEL.computeIfAbsent(networkLevel.dimension(), dimension -> new IdentityHashMap<>())
+                .put(network, networkLevel.getGameTime() + SETTLE_TICKS);
     }
 
     public static void rebuildDueNetworks(ServerLevel level) {

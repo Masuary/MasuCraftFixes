@@ -43,7 +43,7 @@ public final class RefinedStorageNodeTicking {
             }
         }
         for (INetwork network : NodeReconnect.networksToRebuild(node.getNetwork(), neighbourNetworks)) {
-            RefinedStorageReconnects.schedule(level, network);
+            RefinedStorageReconnects.schedule(network);
         }
     }
 }

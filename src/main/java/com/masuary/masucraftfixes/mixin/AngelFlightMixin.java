@@ -30,7 +30,9 @@ public class AngelFlightMixin {
         if (player instanceof ServerPlayer serverPlayer
                 && FtbFlight.isActive(serverPlayer)
                 && (serverPlayer.hasPermissions(4) || !VaultDimensions.isVaultWorld(serverPlayer.level))) {
-            serverPlayer.removeEffect(ModEffects.ANGEL);
+            if (serverPlayer.hasEffect(ModEffects.ANGEL)) {
+                serverPlayer.removeEffect(ModEffects.ANGEL);
+            }
             serverPlayer.removeTag(GRANTED_TAG);
             callbackInfo.cancel();
         }

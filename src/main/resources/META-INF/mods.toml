@@ -66,3 +66,11 @@ Server-side fixes for the MasuCraft Vault Hunters network: FTB /fly rules in vau
     versionRange="[1.10.6]"
     ordering="AFTER"
     side="SERVER"
+
+# RSChunkFix was merged into this mod; with both installed their Refined Storage mixins would cancel each other.
+[[dependencies.masucraftfixes]]
+    modId="rschunkfix"
+    mandatory=false
+    versionRange="[0,0.0.1)"
+    ordering="NONE"
+    side="SERVER"
