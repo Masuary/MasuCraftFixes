@@ -31,6 +31,11 @@ import java.util.UUID;
 public class DeadVaultRescue {
 
     private static final Set<UUID> PLAYERS_AWAITING_MESSAGE = new HashSet<>();
+    private static int rescuedSinceStart;
+
+    public static int rescuedSinceStart() {
+        return rescuedSinceStart;
+    }
 
     /** Runs inside {@code PlayerList.placeNewPlayer}, before the player is added to a level. */
     public static ResourceKey<Level> rescueFromDeadVault(MinecraftServer server, ServerPlayer player, ResourceKey<Level> dimension) {
@@ -41,6 +46,7 @@ public class DeadVaultRescue {
         ResourceKey<Level> rescueDimension = moveToRespawnPoint(server, player).orElseGet(() -> moveToWorldSpawn(server, player));
         player.fallDistance = 0.0F;
         PLAYERS_AWAITING_MESSAGE.add(player.getUUID());
+        rescuedSinceStart++;
         MasuCraftFixes.LOGGER.info("Moved {} out of dead vault world {} to {} at {}",
                 player.getGameProfile().getName(), dimension.location(), rescueDimension.location(), player.blockPosition());
         return rescueDimension;

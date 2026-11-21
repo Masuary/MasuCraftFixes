@@ -1,5 +1,6 @@
 package com.masuary.masucraftfixes;
 
+import com.masuary.masucraftfixes.command.StatusCommand;
 import com.masuary.masucraftfixes.flight.VaultFlightRule;
 import com.masuary.masucraftfixes.refinedstorage.RefinedStorageReconnects;
 import com.masuary.masucraftfixes.vault.DeadVaultRescue;
@@ -18,6 +19,7 @@ public class MasuCraftFixes {
     public MasuCraftFixes() {
         MinecraftForge.EVENT_BUS.register(new VaultFlightRule());
         MinecraftForge.EVENT_BUS.register(new DeadVaultRescue());
+        MinecraftForge.EVENT_BUS.register(new StatusCommand());
         if (ModList.get().isLoaded("refinedstorage")) {
             MinecraftForge.EVENT_BUS.register(new RefinedStorageReconnects.ServerStopListener());
         }
