@@ -22,7 +22,7 @@ All mixins registered in `src/main/resources/mixins.masucraftfixes.json`.
 
 | Mixin | Target | Purpose |
 |---|---|---|
-| `AngelExpertiseMixin` | `AngelExpertise` (The Vault) | Prevents angel expertise from stripping FTB `/fly` flight |
+| `AngelFlightMixin` | `AngelFlight.onPlayerTick` (The Vault 7209+) | Skips VH angel flight grant/revoke while FTB `/fly` is on, so Angel does not strip it |
 | `CommandBlockEditMixin` | `ServerGamePacketListenerImpl` | Restricts command block editing via LuckPerms permission |
 | `FTBCheatCommandsMixin` | `CheatCommands` (FTB Essentials) | Blocks `/fly` inside vault dimensions |
 | `IskalliaDevsMixin` | `IskalliaDevs` (The Vault) | Grants `IskalliaDevs.isDeveloper` based on `masucraftfixes.developer` LuckPerms permission |
@@ -83,7 +83,7 @@ allow-on-unavailable behavior; command-block edits fail closed.
 
 Local JARs in `deps/`:
 - `luckperms-forge.jar` - LuckPerms Forge API
-- `the_vault-1.18.2-20.0.3-remastered.6938.jar` - The Vault mod, VH Remastered 3.0.0 (mixin targets)
+- `the_vault-1.18.2-22.0.0-remastered.7209.jar` - The Vault mod, VH Remastered 4.0.0 (mixin targets; 1.9.0+ requires 7209)
 
 Remote (via CurseMaven):
 - Botania 1.18.2-435 (compile-only mixin target)

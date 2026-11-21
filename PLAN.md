@@ -1,5 +1,16 @@
 # MasuCraftFixes - Plan
 
+## In progress
+
+### VH Remastered 4.0.0 (build 7209) for Skyvault Update 4 (2026-11-20, v1.9.0)
+**Problem:** 7209 removed `AngelExpertise.onTick`; flight is now granted and revoked by the Forge handler
+`iskallia.vault.world.AngelFlight.onPlayerTick(PlayerTickEvent)`. The required `AngelExpertiseMixin` fails to apply and
+the server does not boot (`/mnt/data/Projects/skyvault-update4-2026-11-20/2-jar-diff/reports/our-mods-impact.md`).
+**Plan:** retarget the mixin (renamed `AngelFlightMixin`) to `AngelFlight.onPlayerTick` (static, HEAD, cancellable, skip while FTB `/fly` is on);
+compile against the 7209 jar in `deps/`; version 1.9.0 (7209 only). Deploy deletes the stale 1.8.0 jar too.
+**Not in scope:** hooking `PatreonManager.getActiveTier` so LuckPerms patrons also get 7209's auras and looks.
+**Status (2026-11-20):** code done, `gradlew build` passes against 7209 (uncommitted); in-game check in Skyvault Update 4 phase C (testnet).
+
 ## Completed
 
 ### Running vaults are never closed (2026-11-06, v1.8.1)
