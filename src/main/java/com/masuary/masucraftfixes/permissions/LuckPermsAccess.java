@@ -1,8 +1,10 @@
 package com.masuary.masucraftfixes.permissions;
 
 import com.masuary.masucraftfixes.MasuCraftFixes;
+import com.mojang.authlib.GameProfile;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.cacheddata.CachedPermissionData;
+import net.luckperms.api.model.user.User;
 import net.luckperms.api.platform.PlayerAdapter;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -16,16 +18,19 @@ public final class LuckPermsAccess {
     private LuckPermsAccess() {
     }
 
-    public static boolean doesIgnoreLimit(ServerPlayer player) {
-        Optional<Boolean> ignoresLimit = permissionIfAvailable(player, IGNORES_PLAYER_LIMIT_PERMISSION);
-        if (ignoresLimit.isEmpty()) {
-            MasuCraftFixes.LOGGER.debug("LuckPerms data unavailable for {}, allowing login", player.getGameProfile().getName());
-        }
-        return ignoresLimit.orElse(true);
-    }
-
     public static boolean canEditCommandBlocks(ServerPlayer player) {
         return permissionIfAvailable(player, COMMAND_BLOCK_EDIT_PERMISSION).orElse(false);
+    }
+
+    /** False when LuckPerms has not loaded this user (it loads users during login negotiation). */
+    public static boolean loadedUserHasPermission(GameProfile profile, String permission) {
+        User user = LuckPermsProvider.get().getUserManager().getUser(profile.getId());
+        if (user == null) {
+            MasuCraftFixes.LOGGER.warn("LuckPerms has not loaded {} ({}); {} counts as not granted",
+                    profile.getName(), profile.getId(), permission);
+            return false;
+        }
+        return user.getCachedData().getPermissionData().checkPermission(permission).asBoolean();
     }
 
     /**

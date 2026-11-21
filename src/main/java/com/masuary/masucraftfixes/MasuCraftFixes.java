@@ -1,6 +1,7 @@
 package com.masuary.masucraftfixes;
 
-import com.masuary.masucraftfixes.permissions.PlayerLimitBypass;
+import com.masuary.masucraftfixes.flight.VaultFlightRule;
+import com.masuary.masucraftfixes.vault.DeadVaultRescue;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import org.apache.logging.log4j.LogManager;
@@ -13,6 +14,7 @@ public class MasuCraftFixes {
     public static final Logger LOGGER = LogManager.getLogger();
 
     public MasuCraftFixes() {
-        MinecraftForge.EVENT_BUS.register(new PlayerLimitBypass());
+        MinecraftForge.EVENT_BUS.register(new VaultFlightRule());
+        MinecraftForge.EVENT_BUS.register(new DeadVaultRescue());
     }
 }

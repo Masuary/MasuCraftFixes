@@ -18,15 +18,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ServerGamePacketListenerImpl.class)
 public abstract class CommandBlockEditMixin {
 
+    @Unique
+    private static final String ENSURE_RUNNING_ON_SERVER_THREAD = "Lnet/minecraft/network/protocol/PacketUtils;"
+            + "ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;"
+            + "Lnet/minecraft/server/level/ServerLevel;)V";
+
     @Shadow
     public ServerPlayer player;
 
-    @Inject(method = "handleSetCommandBlock", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "handleSetCommandBlock", at = @At(value = "INVOKE", target = ENSURE_RUNNING_ON_SERVER_THREAD, shift = At.Shift.AFTER), cancellable = true)
     private void blockCommandBlockEditWithoutPermission(ServerboundSetCommandBlockPacket packet, CallbackInfo callbackInfo) {
         masucraftfixes$denyCommandBlockEditWithoutPermission(callbackInfo);
     }
 
-    @Inject(method = "handleSetCommandMinecart", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "handleSetCommandMinecart", at = @At(value = "INVOKE", target = ENSURE_RUNNING_ON_SERVER_THREAD, shift = At.Shift.AFTER), cancellable = true)
     private void blockCommandMinecartEditWithoutPermission(ServerboundSetCommandMinecartPacket packet, CallbackInfo callbackInfo) {
         masucraftfixes$denyCommandBlockEditWithoutPermission(callbackInfo);
     }
