@@ -2,6 +2,26 @@
 
 ## In progress
 
+### Phase R2a: VH Remastered 4.0.1 (the_vault 7226, Vault Integrations 1.0.22) (2026-11-23, v1.9.0 unchanged)
+**Problem:** `mods.toml` pinned the_vault to 7209, and VI 1.0.22's storage fix `refinedStorageNoForcedChunkLoads`
+redirects the same `INetworkNode.update()` call in `NetworkListener.onLevelTick` as `NetworkListenerMixin` (both
+configs require their injections: the boot fails). VI's group is a subset of our chunk fix (no carry-over, adoption or
+late-load reconnects). Impact report: `/mnt/data/Projects/skyvault-update4-2026-11-20/10-diff-4.0.1/reports/our-mods-impact-4.0.1.md`.
+**Decision (sir, 2026-11-23): option B.** Keep our RS code; every backend ships
+`config/vaultintegrations/storage_fixes.json` with `refinedStorageNoForcedChunkLoads.enabled = false`; the other VI
+storage fixes stay on. Rejected: A (retire our three duplicate mixins and rely on VI's: splits the behaviour across two
+mods, a tick-gap guess for reconnects, two rebuilds per base load) and A-adaptive.
+**Done:** pin `[1.18.2-22.0.1-remastered.7226]`, CurseMaven file 9761351 (SHA-256 equal to the pack jar);
+`VaultIntegrationsChunkFixCheck` stops the boot from the mixin plugin with a message naming the file and key (6 tests).
+Commit 1c715df. Independent Opus review: no critical or high findings; fixed in d732484 (version-guard wording,
+side-neutral message, plugin wiring test). 21 tests, -Werror, curse-maven gate PASS, jar-api-compat 0 broken against
+7226 and VI 1.0.22.
+**Status:** done 2026-11-23. Jar SHA-256 1d65be5c... (same 1.9.0 file name as the never-deployed 7209 build). Testnet
+4.0.1: fail-fast (VI key on: boot stops with our message), boot gate, B1, B2 (with online control), B3, B3/F1 after a
+restart, F1 and adoption all PASS (`/mnt/data/AI/work/masucraftfixes-r2a-2026-11-23/qa/testnet-results.md`). Deploy:
+the package ships `config/vaultintegrations/storage_fixes.json` on all four (Skyvault Update 4 RUNBOOK, row 10 R2a).
+Open: Wolds (`masucraftfixes-wolds` + `rschunkfix`) only matters if that pack takes VI 1.0.22; ask sir first.
+
 ### Phase R review: fixes, retirements, RSChunkFix merge (2026-11-21, v1.9.0 unchanged)
 Reviews: `/mnt/data/Projects/skyvault-update4-2026-11-20/9-mod-review/findings/10-masucraftfixes.md` and
 `.../19-rschunkfix.md` (evidence, failure scenarios). Sir's decisions (interview 2026-11-21):

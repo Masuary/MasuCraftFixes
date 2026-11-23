@@ -1,6 +1,6 @@
 # MasuCraftFixes
 
-Server-side Forge 1.18.2 mod with fixes for the MasuCraft Skyvault (VH Remastered 4.0.0, the_vault 7209) network.
+Server-side Forge 1.18.2 mod with fixes for the MasuCraft Skyvault (VH Remastered 4.0.1, the_vault 7226) network.
 Since 1.9.0 it also contains the Refined Storage chunk fix that used to be the separate RSChunkFix mod (archived).
 
 ## Build
@@ -14,14 +14,14 @@ Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.9.0`). javac 
 `./gradlew build` also runs the JUnit tests (`src/test`).
 
 Every mod dependency comes from CurseMaven (file ids in `gradle.properties`, each the exact jar the VH Remastered
-4.0.0 pack ships); LuckPerms only through `net.luckperms:api`. Local jars only through an opt-in override, e.g.
+4.0.1 pack ships); LuckPerms only through `net.luckperms:api`. Local jars only through an opt-in override, e.g.
 `-Pvault_jar=path/to/the_vault.jar` (properties: `vault_jar`, `quark_jar`, `autoreglib_jar`, `ftb_essentials_jar`,
 `botania_jar`, `refined_storage_jar`). `deps/` is git-ignored and no longer used by the build.
 
 ## Package Structure
 
 - `com.masuary.masucraftfixes` - mod class (registers the event listeners and the command), `MasuCraftFixesMixinPlugin`
-  (Botania and Refined Storage mixins apply only when that mod is installed)
+  (Botania and Refined Storage mixins apply only when that mod is installed; runs the Vault Integrations check below)
 - `command` - `/masucraftfixes status` (op level 2)
 - `flight` - FTB `/fly` helpers and `VaultFlightRule`
 - `permissions` - `LuckPermsAccess` (node names, player and offline-user checks), `PlayerLimitBypass`
@@ -35,7 +35,7 @@ All registered in `src/main/resources/mixins.masucraftfixes.json`.
 
 | Mixin | Target | Purpose |
 |---|---|---|
-| `AngelFlightMixin` | `AngelFlight.revoke` (The Vault 7209) | While FTB `/fly` is on (outside a vault, or op), VH's Angel revoke only clears its Angel effect and tag, so FTB flight stays (covers the range tick and the expertise regret path) |
+| `AngelFlightMixin` | `AngelFlight.revoke` (The Vault 7209+) | While FTB `/fly` is on (outside a vault, or op), VH's Angel revoke only clears its Angel effect and tag, so FTB flight stays (covers the range tick and the expertise regret path) |
 | `CommandBlockEditMixin` | `ServerGamePacketListenerImpl` | Command block and minecart edits need `masucraftfixes.commandblock.edit`; checked after the packet moved to the server thread |
 | `DedicatedPlayerListMixin` (server) | `DedicatedPlayerList.canBypassPlayerLimit` | `masucraftfixes.ignores_player_limit` lets a player join a full backend (LuckPerms Forge loads users during login negotiation, before this check) |
 | `FTBCheatCommandsMixin` | `CheatCommands.fly` (FTB Essentials) | Blocks `/fly` inside vault dimensions for non-ops |
@@ -64,6 +64,13 @@ loads every RS chunk. Rules:
   (RS saves only running tasks, which deleted crafts of offline networks with their ingredients).
 - RS is pinned to `[1.10.6]` in `mods.toml`: re-read every target before allowing another RS version. `mods.toml` also
   refuses to load next to `rschunkfix` (both would cancel the same RS methods).
+- Vault Integrations 1.0.22+ has its own subset of this fix (`refinedStorageNoForcedChunkLoads`, package
+  `mixin.storage.unloadedchunks`); its `@Redirect` of `INetworkNode.update()` in `NetworkListener.onLevelTick` collides
+  with ours and fails the boot. Ours is kept (sir, 2026-11-23: carry-over, adoption and reconnects build on it), so every
+  backend ships `config/vaultintegrations/storage_fixes.json` with `"refinedStorageNoForcedChunkLoads": {"enabled":
+  false}` (VI's other storage fixes stay on). `VaultIntegrationsChunkFixCheck`, called from the mixin plugin when it
+  decides `NetworkListenerMixin`, stops the boot with a message naming that file and key while VI's fix is active, and
+  also when VI's `StorageFix` no longer has that constant (re-check VI's RS mixins on every VI update).
 
 ## LuckPerms
 
@@ -80,8 +87,11 @@ could remove every running vault if VH's registry failed to load). History: `PLA
 
 ## Testing
 
-Unit tests cover the pure logic (vault dimension parsing, crafting task carry-over, reconnect decision, `DueQueue`).
+Unit tests cover the pure logic (vault dimension parsing, crafting task carry-over, reconnect decision, `DueQueue`,
+the Vault Integrations check against stand-in `StorageFix` enums, the plugin's `NetworkListenerMixin` name against
+`mixins.masucraftfixes.json`).
 Runtime behaviour is checked on the Skyvault U4 test network
-(`/mnt/data/AI/work/masucraftfixes-phaseR-2026-11-21/qa/`: scripts, `testnet-results.md`).
+(`/mnt/data/AI/work/masucraftfixes-phaseR-2026-11-21/qa/` on 4.0.0, `/mnt/data/AI/work/masucraftfixes-r2a-2026-11-23/qa/`
+on 4.0.1: scripts, `testnet-results.md`).
 
 <!-- masuary-os-area --> Masuary OS area: [minecraft](/mnt/data/AI/os/areas/minecraft.md) (where this project sits in the map; update that line when this folder moves)
