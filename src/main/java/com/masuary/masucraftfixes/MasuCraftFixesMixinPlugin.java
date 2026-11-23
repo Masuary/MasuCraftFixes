@@ -16,8 +16,8 @@ import java.util.Set;
 public class MasuCraftFixesMixinPlugin implements IMixinConfigPlugin {
 
     private static final String ORECHID_IGNEM_MIXIN = "com.masuary.masucraftfixes.mixin.OrechidIgnemMixin";
-    private static final String REFINED_STORAGE_MIXIN_PACKAGE = "com.masuary.masucraftfixes.mixin.refinedstorage.";
-    private static final String NETWORK_LISTENER_MIXIN = REFINED_STORAGE_MIXIN_PACKAGE + "NetworkListenerMixin";
+    static final String REFINED_STORAGE_MIXIN_PACKAGE = "com.masuary.masucraftfixes.mixin.refinedstorage.";
+    static final String NETWORK_LISTENER_MIXIN = REFINED_STORAGE_MIXIN_PACKAGE + "NetworkListenerMixin";
 
     @Override
     public void onLoad(String mixinPackage) {

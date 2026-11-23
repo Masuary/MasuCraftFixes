@@ -28,7 +28,7 @@ public final class VaultIntegrationsChunkFixCheck {
         if (storageFixClass.isPresent() && isConflictingFixActive(storageFixClass.get())) {
             throw new IllegalStateException("MasuCraftFixes and Vault Integrations both patch Refined Storage's"
                     + " unloaded-chunk handling (NetworkListener.onLevelTick) and cannot run together. Set \""
-                    + CONFIG_KEY + "\": {\"enabled\": false} in " + CONFIG_FILE + " and restart the server.");
+                    + CONFIG_KEY + "\": {\"enabled\": false} in " + CONFIG_FILE + " and start again.");
         }
     }
 
@@ -64,9 +64,9 @@ public final class VaultIntegrationsChunkFixCheck {
     }
 
     private static IllegalStateException incompatibleVaultIntegrations(Exception cause) {
-        return new IllegalStateException("This Vault Integrations version has no readable "
-                + STORAGE_FIX_CLASS_NAME + "." + CONFLICTING_FIX_CONSTANT + ".isActive(): check whether its Refined"
-                + " Storage chunk fix still redirects INetworkNode.update() in NetworkListener before running"
-                + " MasuCraftFixes with it.", cause);
+        return new IllegalStateException("MasuCraftFixes version guard: this Vault Integrations version has no readable "
+                + STORAGE_FIX_CLASS_NAME + "." + CONFLICTING_FIX_CONSTANT + ".isActive(). Check whether its Refined"
+                + " Storage chunk fix still redirects INetworkNode.update() in NetworkListener, then update"
+                + " MasuCraftFixes for this Vault Integrations version.", cause);
     }
 }
