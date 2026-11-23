@@ -28,7 +28,7 @@ Server-side fixes for the MasuCraft Vault Hunters network: FTB /fly rules in vau
 [[dependencies.masucraftfixes]]
     modId="the_vault"
     mandatory=true
-    versionRange="[1.18.2-22.0.0-remastered.7209]"
+    versionRange="[1.18.2-22.0.1-remastered.7226]"
     ordering="AFTER"
     side="SERVER"
 
