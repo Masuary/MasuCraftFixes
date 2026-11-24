@@ -2,6 +2,22 @@
 
 ## In progress
 
+### Quark registry order (2026-11-24, v1.9.1) - done
+**Problem:** Ambassador logged "Registry drift: EVENT differs from MAIN in 3 registries [block_entity_type, menu,
+recipe_serializer]" on the live network. Quark 3.2-358 keeps its modules in a `HashMap<Class, QuarkModule>` (identity
+hash, new every JVM run) and registers in that order; those three registries are not saved, so every backend boot
+renumbered the Quark entries. With `bypass-registry-checks` a hopping client kept its first backend's ids: the wrong
+menu for Crate/Backpack/Matrix Enchanting and lost block entity data for Quark blocks.
+**Fix:** `ModuleLoaderMixin` redirects `ModuleFinder.getFoundModules()` in `ModuleLoader.findModules` to a copy
+ordered by class name (`quark.QuarkModuleOrder`).
+**Verified:** offline boots of the 2026-11-24 MAIN/EVENT panel backups with a registry dump mod. 1.9.0: MAIN vs EVENT
+and MAIN vs MAIN differ (quark entries only); 1.9.1: all 37 synced registries identical across MAIN, EVENT and two MAIN
+boots. Evidence `/mnt/data/AI/work/skyvault-registry-drift-2026-11-24/FINDINGS.md`.
+- [x] Mixin, helper, unit test; build and tests pass
+- [x] Offline proof on MAIN and EVENT copies
+- [x] Live on MAIN, EVENT, OMNI and VOID (2026-11-24, under maintenance): a client that joined MAIN and switched to
+  EVENT, VOID, OMNI and back got "Registries of X match MAIN" from Ambassador's debug mode on every switch
+
 ### Phase R2a: VH Remastered 4.0.1 (the_vault 7226, Vault Integrations 1.0.22) (2026-11-23, v1.9.0 unchanged)
 **Problem:** `mods.toml` pinned the_vault to 7209, and VI 1.0.22's storage fix `refinedStorageNoForcedChunkLoads`
 redirects the same `INetworkNode.update()` call in `NetworkListener.onLevelTick` as `NetworkListenerMixin` (both

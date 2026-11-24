@@ -10,7 +10,7 @@ Requires Java 17 (the system default may be Java 21):
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk PATH=/usr/lib/jvm/java-17-openjdk/bin:$PATH ./gradlew build
 ```
 
-Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.9.0`). javac runs with `-Xlint:all -Werror`;
+Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.9.1`). javac runs with `-Xlint:all -Werror`;
 `./gradlew build` also runs the JUnit tests (`src/test`).
 
 Every mod dependency comes from CurseMaven (file ids in `gradle.properties`, each the exact jar the VH Remastered
@@ -26,6 +26,7 @@ Every mod dependency comes from CurseMaven (file ids in `gradle.properties`, eac
 - `flight` - FTB `/fly` helpers and `VaultFlightRule`
 - `permissions` - `LuckPermsAccess` (node names, player and offline-user checks), `PlayerLimitBypass`
 - `vault` - `VaultDimensions`, `DeadVaultRescue`, `CrystalCommandSuggestions`
+- `quark` - `QuarkModuleOrder` (Quark modules in class-name order, see `ModuleLoaderMixin`)
 - `refinedstorage` - the Refined Storage chunk fix (helpers and duck interfaces of the mixins below)
 - `mixin`, `mixin.refinedstorage` - all mixins, named `<Target>Mixin`
 
@@ -39,6 +40,7 @@ All registered in `src/main/resources/mixins.masucraftfixes.json`.
 | `CommandBlockEditMixin` | `ServerGamePacketListenerImpl` | Command block and minecart edits need `masucraftfixes.commandblock.edit`; checked after the packet moved to the server thread |
 | `DedicatedPlayerListMixin` (server) | `DedicatedPlayerList.canBypassPlayerLimit` | `masucraftfixes.ignores_player_limit` lets a player join a full backend (LuckPerms Forge loads users during login negotiation, before this check) |
 | `FTBCheatCommandsMixin` | `CheatCommands.fly` (FTB Essentials) | Blocks `/fly` inside vault dimensions for non-ops |
+| `ModuleLoaderMixin` | `ModuleLoader.findModules` (Quark) | Quark modules run in class-name order instead of `HashMap<Class>` order, so the unsaved block entity, menu and recipe serializer ids are the same on every backend and boot (a hopping client keeps its first backend's ids under Ambassador's `bypass-registry-checks`) |
 | `ModifyCrystalSuggestionsMixin` | `ModifyCrystalSubcommand` (The Vault) | Room pool suggestions for `/the_vault modify crystal addRoom` |
 | `OrechidIgnemMixin` | `SubTileOrechidIgnem` (Botania, optional) | Orechid Ignem also works in `#minecraft:is_nether` biomes outside ceiling dimensions |
 | `PickarangMixin` | `Pickarang` (Quark) | Pickarang ignores items tagged `fake_item` / `PreventMagnetMovement` |

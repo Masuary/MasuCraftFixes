@@ -9,6 +9,7 @@
     "CommandBlockEditMixin",
     "FTBCheatCommandsMixin",
     "ModifyCrystalSuggestionsMixin",
+    "ModuleLoaderMixin",
     "OrechidIgnemMixin",
     "PickarangMixin",
     "PlayerListMixin",
