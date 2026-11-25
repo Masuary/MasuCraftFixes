@@ -10,7 +10,7 @@ Requires Java 17 (the system default may be Java 21):
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk PATH=/usr/lib/jvm/java-17-openjdk/bin:$PATH ./gradlew build
 ```
 
-Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.9.1`). javac runs with `-Xlint:all -Werror`;
+Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.9.2`). javac runs with `-Xlint:all -Werror`;
 `./gradlew build` also runs the JUnit tests (`src/test`).
 
 Every mod dependency comes from CurseMaven (file ids in `gradle.properties`, each the exact jar the VH Remastered
@@ -27,6 +27,8 @@ Every mod dependency comes from CurseMaven (file ids in `gradle.properties`, eac
 - `permissions` - `LuckPermsAccess` (node names, player and offline-user checks), `PlayerLimitBypass`
 - `vault` - `VaultDimensions`, `DeadVaultRescue`, `CrystalCommandSuggestions`
 - `quark` - `QuarkModuleOrder` (Quark modules in class-name order, see `ModuleLoaderMixin`)
+- `recipes` - known broken pack recipes: `KnownBrokenPackRecipes` (reads `masucraftfixes/known_broken_pack_recipes.txt`),
+  `KnownBrokenRecipeLogFilter` (installed by the mod class), `BrokenRecipeLoadReport` (see below)
 - `refinedstorage` - the Refined Storage chunk fix (helpers and duck interfaces of the mixins below)
 - `mixin`, `mixin.refinedstorage` - all mixins, named `<Target>Mixin`
 
@@ -45,6 +47,7 @@ All registered in `src/main/resources/mixins.masucraftfixes.json`.
 | `OrechidIgnemMixin` | `SubTileOrechidIgnem` (Botania, optional) | Orechid Ignem also works in `#minecraft:is_nether` biomes outside ceiling dimensions |
 | `PickarangMixin` | `Pickarang` (Quark) | Pickarang ignores items tagged `fake_item` / `PreventMagnetMovement` |
 | `PlayerListMixin` | `PlayerList.placeNewPlayer` | Player saved in a missing, deleted or vault-less vault world goes to their respawn point (world spawn otherwise) and is told why (`DeadVaultRescue`); VH 7209 only rescues from a loaded vault world |
+| `RecipeManagerMixin` | `RecipeManager.apply` (TAIL) | Counts the known broken pack recipes and warns about stale list entries (see Known broken pack recipes) |
 | `refinedstorage.*` | Refined Storage 1.10.6 (optional) | See below |
 
 `VaultFlightRule` (not a mixin) switches FTB `/fly` off in vault dimensions for non-ops from the server-thread
@@ -73,6 +76,17 @@ loads every RS chunk. Rules:
   false}` (VI's other storage fixes stay on). `VaultIntegrationsChunkFixCheck`, called from the mixin plugin when it
   decides `NetworkListenerMixin`, stops the boot with a message naming that file and key while VI's fix is active, and
   also when VI's `StorageFix` no longer has that constant (re-check VI's RS mixins on every VI update).
+
+## Known broken pack recipes (`recipes`)
+
+The VH Remastered 4.0.1 pack ships 105 recipes that cannot load in it (items its mod versions do not have); the stock
+pack logs a parse error stack trace for each on every boot and `/reload`. Sir's rule: hide them, never fix them (what
+does not work in the base pack stays broken). `KnownBrokenRecipeLogFilter` is a log4j filter on the `RecipeManager`
+logger that drops only the "Parsing error loading recipe {}" events of the listed ids; any other recipe error still
+logs. It is a log filter and not a redirect because Steam Rails already `@Redirect`s that `Logger.error` call
+(priority 10000) and a second redirect fails the boot. `RecipeManagerMixin` (TAIL of `apply`) logs one INFO count and
+WARNs for listed recipes that load now or are no longer shipped: rebuild the list from a stock boot log on every pack
+update.
 
 ## LuckPerms
 

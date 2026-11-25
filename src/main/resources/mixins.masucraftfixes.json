@@ -13,6 +13,7 @@
     "OrechidIgnemMixin",
     "PickarangMixin",
     "PlayerListMixin",
+    "RecipeManagerMixin",
     "refinedstorage.CraftingManagerMixin",
     "refinedstorage.NetworkListenerMixin",
     "refinedstorage.NetworkMixin",

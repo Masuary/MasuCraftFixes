@@ -2,6 +2,26 @@
 
 ## In progress
 
+### Known broken pack recipes stay quiet (2026-11-25, v1.9.2) - built, not deployed
+**Problem:** every Skyvault backend logged 105 "Parsing error loading recipe" stack traces per boot (about 3,300
+lines). All come from the VH Remastered 4.0.1 pack itself (the stock single-player pack logs the same 105): recipes
+for items the pack's mod versions do not have (Create compat for a newer Regions Unexplored, Prismcraft 1.19+ woods,
+Iron Generators `deleted_mod_element` and `appliedenergistics2:` sky stone, Twigs sea shell, Architects Palette,
+PneumaticCraft biofuel). Sir: errors gone, no recipe fixes (what does not work in the base pack stays broken,
+including the Sky Stone generator).
+**Fix:** `recipes.KnownBrokenRecipeLogFilter`, a log4j filter on the `RecipeManager` logger, drops the parse error
+event of the 105 ids in `masucraftfixes/known_broken_pack_recipes.txt`; the recipes still fail exactly as in the
+pack. Steam Rails already `@Redirect`s that `Logger.error` call (priority 10000), so a redirect of ours fails the
+boot (tried first, crashed). `RecipeManagerMixin` (TAIL of `apply`) logs one INFO count and WARNs when a listed
+recipe loads now or is no longer shipped (re-check the list on every pack update).
+**Verified:** offline boot of the 2026-11-24 MAIN panel copy: 105 -> 0 parse errors, latest.log 5,277 -> 1,985
+lines, every other ERROR line identical to the 1.9.1 boot; `/reload` with an unlisted broken QA recipe still logged
+its error while the 105 stayed hidden. Evidence `/mnt/data/AI/work/skyvault-recipe-errors-2026-11-25/`.
+- [x] Filter, list, report mixin, unit tests; build and tests pass
+- [x] Offline proof on the MAIN copy (boot + `/reload`)
+- [ ] Commit, tag `masucraftfixes-1.9.2`, push
+- [ ] Live on MAIN, EVENT, OMNI and VOID (swap-jar; needs sir's go and a panel write key)
+
 ### Quark registry order (2026-11-24, v1.9.1) - done
 **Problem:** Ambassador logged "Registry drift: EVENT differs from MAIN in 3 registries [block_entity_type, menu,
 recipe_serializer]" on the live network. Quark 3.2-358 keeps its modules in a `HashMap<Class, QuarkModule>` (identity
