@@ -2,7 +2,7 @@
 
 ## In progress
 
-### Known broken pack recipes stay quiet (2026-11-25, v1.9.2) - built, not deployed
+### Known broken pack recipes stay quiet (2026-11-25, v1.9.2) - uploaded, loads at the next restart
 **Problem:** every Skyvault backend logged 105 "Parsing error loading recipe" stack traces per boot (about 3,300
 lines). All come from the VH Remastered 4.0.1 pack itself (the stock single-player pack logs the same 105): recipes
 for items the pack's mod versions do not have (Create compat for a newer Regions Unexplored, Prismcraft 1.19+ woods,
@@ -19,8 +19,11 @@ lines, every other ERROR line identical to the 1.9.1 boot; `/reload` with an unl
 its error while the 105 stayed hidden. Evidence `/mnt/data/AI/work/skyvault-recipe-errors-2026-11-25/`.
 - [x] Filter, list, report mixin, unit tests; build and tests pass
 - [x] Offline proof on the MAIN copy (boot + `/reload`)
-- [ ] Commit, tag `masucraftfixes-1.9.2`, push
-- [ ] Live on MAIN, EVENT, OMNI and VOID (swap-jar; needs sir's go and a panel write key)
+- [x] Commit 5bcf550, tag `masucraftfixes-1.9.2`, pushed
+- [x] Uploaded beside 1.9.1 on MAIN, EVENT, OMNI and VOID (2026-11-25 14:36 UTC, `deploy --uploads-only`, sir's go,
+  SHA-256 verified); Forge loads 1.9.2 at the next scheduled restart (MAIN/VOID/OMNI ~18:30 CET, EVENT ~00:30 CET)
+- [ ] After those restarts: FML `masucraftfixes (version 1.9.1 -> 1.9.2)`, 0 parse errors and the "Skipped 105" line
+  in each latest.log, then move 1.9.1 to `mods-previous/` (`move_aside_jar.py --allow-running`)
 
 ### Quark registry order (2026-11-24, v1.9.1) - done
 **Problem:** Ambassador logged "Registry drift: EVENT differs from MAIN in 3 registries [block_entity_type, menu,
