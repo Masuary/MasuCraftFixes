@@ -2,7 +2,7 @@
 
 ## In progress
 
-### No server hang when a player is disconnected from a vault worker thread (sir, 2026-11-26, v1.9.3) - built and testnet-proven, deploy next
+### No server hang when a player is disconnected from a vault worker thread (sir, 2026-11-26, v1.9.3) - uploaded, loads at the next restart
 Found in the MAIN watchdog crash of 2026-11-26 14:29 (analysis: MasuCraft-CrossServer `PLAN.md` Phase 2.10.2; crash, logs and decompiled Neruina 2.1.2 / VH 7226 in `/mnt/data/AI/work/pds-vault-thread-grants-2026-11-26/`). VH ticks CONCURRENT vaults on worker threads while the server thread waits in `VirtualWorlds.tick`. Any exception in a player's tick inside a vault reaches Neruina 2.1.2's `TickHandler.handleTickingPlayer`, which calls `player.connection.disconnect(...)` on that worker; vanilla `ServerGamePacketListenerImpl.disconnect` ends with `server.executeBlocking(connection::handleDisconnection)`, so the worker joins a task the blocked server thread never runs, and the watchdog kills the server after 60 s. PDS 2.10.2 removed the trigger that crashed MAIN, but every other mod's player-tick exception in a vault still hangs a backend.
 - Sir's choice: fix it here (not Neruina's `handle_ticking_players=false`, which would crash instead of hang)
 **Fix:** `ServerGamePacketListenerImplMixin` `@Redirect`s the `executeBlocking` call in `disconnect` to `network.DisconnectHandOff`: on the server thread it calls `executeBlocking` as before (runs inline); off it, one WARN (player, thread) and `server.execute`, so the vault worker returns and the server thread handles the disconnection between ticks. Vanilla's packet send and `setReadOnly` stay untouched. No mod in the 185-jar MAIN set targets `disconnect` or `executeBlocking` (refmap scan), so the redirect cannot collide. Netty-thread callers (keepalive id mismatch) also stop blocking; at shutdown `execute` runs inline like vanilla's `submitAsync`.
@@ -10,9 +10,11 @@ Found in the MAIN watchdog crash of 2026-11-26 14:29 (analysis: MasuCraft-CrossS
 - [x] Testnet repro (MAIN+VOID 4.0.1.1, CrowleyEU in CONCURRENT vault `vault_e78397c5`, test-only `masuqa-tickthrow` mixin throwing from `ServerPlayer.tick`, VOID watchdog at the live 60 s): base 1.9.2 hung exactly like live (server thread in `VirtualWorlds.tick` -> `IntLatch.waitUntil`, vault thread in `disconnect` -> `executeBlocking` join from Neruina `handleTickingPlayer`) and the watchdog killed VOID after 60 s; 1.9.3 logged the WARN on the vault thread, the server thread handled the kick 1 ms later, ~20 TPS on, no thread in `executeBlocking`, player rejoined into the same vault; console `/kick` on MAIN unchanged (inline, no WARN). Evidence `/mnt/data/AI/work/masucraftfixes-offthread-disconnect-2026-11-26/qa/testnet-results.md`; testnet restored to 1.9.2 afterwards (1.9.3 + QA mod in `mods-aside-mcf-qa-2026-11-26/`)
 - Sir's ship decisions (interview 2026-11-26): scratch worktree `base-src` removed (`git worktree remove`; the base jar can be rebuilt from tag `masucraftfixes-1.9.2`); upload beside 1.9.2 with no restart, so it loads at the next scheduled restart; the write key is the PDS 2.10.2 temp key (`panel-temp-pds2102-2026-11-26.env`), which sir revokes after the post-restart checks
 - Learned: a `PlayerTickEvent` throw is not a vault-worker repro: in 1.18.2 the event fires from `ServerPlayer.doTick` (connection tick, server thread); only `ServerPlayer.tick()` runs on the vault worker
-- [ ] Commit, tag `masucraftfixes-1.9.3`, push; upload beside 1.9.2 on MAIN, EVENT, OMNI and VOID like 1.9.2 (`deploy --uploads-only`, SHA-256 verified), loads at the next scheduled restart; afterwards check each latest.log for `masucraftfixes (version 1.9.2 -> 1.9.3)` and move 1.9.2 to `mods-previous/`
+- [x] Commit c0e1043, tag `masucraftfixes-1.9.3`, pushed; `./gradlew clean build` (JDK 17) 37 tests green, rebuild differs from the release jar only in the MANIFEST `Implementation-Timestamp`, so the release jar b731e83e... shipped
+- [x] Uploaded beside 1.9.2 on MAIN, EVENT, OMNI and VOID (2026-11-26 19:34 UTC, `deploy --uploads-only`, sir's go, size + SHA-256 verified; re-crawl shows 1.9.2 and 1.9.3 in each `mods/`). Package and log: `/mnt/data/AI/work/masucraftfixes-offthread-disconnect-2026-11-26/deploy/`
+- [ ] After the scheduled Restart 2026-11-27 00:00 CET (all four, same restart that loads PlayerDataSync 2.10.2): each latest.log shows FML `masucraftfixes (version 1.9.2 -> 1.9.3)` and the "Skipped 105" line; then move 1.9.2 to `mods-previous/` (`move_aside_jar.py --allow-running`, sir's go), re-crawl, regenerate `our-mods.md`, update the network memory; sir revokes the temp key (`panel-temp-pds2102-2026-11-26.env`) after this and the PDS check, then the file is deleted
 
-### Known broken pack recipes stay quiet (2026-11-25, v1.9.2) - uploaded, loads at the next restart
+### Known broken pack recipes stay quiet (2026-11-25, v1.9.2) - done
 **Problem:** every Skyvault backend logged 105 "Parsing error loading recipe" stack traces per boot (about 3,300
 lines). All come from the VH Remastered 4.0.1 pack itself (the stock single-player pack logs the same 105): recipes
 for items the pack's mod versions do not have (Create compat for a newer Regions Unexplored, Prismcraft 1.19+ woods,
@@ -32,8 +34,9 @@ its error while the 105 stayed hidden. Evidence `/mnt/data/AI/work/skyvault-reci
 - [x] Commit 5bcf550, tag `masucraftfixes-1.9.2`, pushed
 - [x] Uploaded beside 1.9.1 on MAIN, EVENT, OMNI and VOID (2026-11-25 14:36 UTC, `deploy --uploads-only`, sir's go,
   SHA-256 verified); Forge loads 1.9.2 at the next scheduled restart (MAIN/VOID/OMNI ~18:30 CET, EVENT ~00:30 CET)
-- [ ] After those restarts: FML `masucraftfixes (version 1.9.1 -> 1.9.2)`, 0 parse errors and the "Skipped 105" line
-  in each latest.log, then move 1.9.1 to `mods-previous/` (`move_aside_jar.py --allow-running`)
+- [x] After those restarts: FML `masucraftfixes (version 1.9.1 -> 1.9.2)`, 0 parse errors and the "Skipped 105" line
+  in each latest.log, then move 1.9.1 to `mods-previous/` (done 2026-11-25 16:03-16:10 UTC with the PDS 2.10.1 restarts;
+  the 2026-11-26 crawl shows only 1.9.2 in `mods/` and 1.9.1 in `mods-previous/`, and every latest.log has "Skipped 105")
 
 ### Quark registry order (2026-11-24, v1.9.1) - done
 **Problem:** Ambassador logged "Registry drift: EVENT differs from MAIN in 3 registries [block_entity_type, menu,
