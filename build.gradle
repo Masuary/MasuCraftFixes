@@ -16,7 +16,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
 
-version = '1.9.2'
+version = '1.9.3'
 group = 'com.masuary.masucraftfixes'
 archivesBaseName = 'masucraftfixes'
 

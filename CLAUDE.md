@@ -10,7 +10,7 @@ Requires Java 17 (the system default may be Java 21):
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk PATH=/usr/lib/jvm/java-17-openjdk/bin:$PATH ./gradlew build
 ```
 
-Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.9.2`). javac runs with `-Xlint:all -Werror`;
+Output JAR: `build/libs/masucraftfixes-<version>.jar` (current: `1.9.3`). javac runs with `-Xlint:all -Werror`;
 `./gradlew build` also runs the JUnit tests (`src/test`).
 
 Every mod dependency comes from CurseMaven (file ids in `gradle.properties`, each the exact jar the VH Remastered
@@ -26,6 +26,7 @@ Every mod dependency comes from CurseMaven (file ids in `gradle.properties`, eac
 - `flight` - FTB `/fly` helpers and `VaultFlightRule`
 - `permissions` - `LuckPermsAccess` (node names, player and offline-user checks), `PlayerLimitBypass`
 - `vault` - `VaultDimensions`, `DeadVaultRescue`, `CrystalCommandSuggestions`
+- `network` - `DisconnectHandOff` (see `ServerGamePacketListenerImplMixin`)
 - `quark` - `QuarkModuleOrder` (Quark modules in class-name order, see `ModuleLoaderMixin`)
 - `recipes` - known broken pack recipes: `KnownBrokenPackRecipes` (reads `masucraftfixes/known_broken_pack_recipes.txt`),
   `KnownBrokenRecipeLogFilter` (installed by the mod class), `BrokenRecipeLoadReport` (see below)
@@ -48,6 +49,7 @@ All registered in `src/main/resources/mixins.masucraftfixes.json`.
 | `PickarangMixin` | `Pickarang` (Quark) | Pickarang ignores items tagged `fake_item` / `PreventMagnetMovement` |
 | `PlayerListMixin` | `PlayerList.placeNewPlayer` | Player saved in a missing, deleted or vault-less vault world goes to their respawn point (world spawn otherwise) and is told why (`DeadVaultRescue`); VH 7209 only rescues from a loaded vault world |
 | `RecipeManagerMixin` | `RecipeManager.apply` (TAIL) | Counts the known broken pack recipes and warns about stale list entries (see Known broken pack recipes) |
+| `ServerGamePacketListenerImplMixin` | `ServerGamePacketListenerImpl.disconnect` (`@Redirect` of `executeBlocking`) | A disconnect off the server thread queues `handleDisconnection` with `server.execute` (one WARN naming the player and thread) instead of waiting for it; server-thread calls are unchanged. VH ticks CONCURRENT vaults on worker threads while the server thread waits for them, so Neruina's kick of a player whose `ServerPlayer.tick` threw in a vault used to deadlock the server until the watchdog (MAIN, 2026-11-26) |
 | `refinedstorage.*` | Refined Storage 1.10.6 (optional) | See below |
 
 `VaultFlightRule` (not a mixin) switches FTB `/fly` off in vault dimensions for non-ops from the server-thread
@@ -104,10 +106,14 @@ could remove every running vault if VH's registry failed to load). History: `PLA
 ## Testing
 
 Unit tests cover the pure logic (vault dimension parsing, crafting task carry-over, reconnect decision, `DueQueue`,
+the off-thread disconnect hand-off against a real `BlockableEventLoop` whose thread waits for the worker,
 the Vault Integrations check against stand-in `StorageFix` enums, the plugin's `NetworkListenerMixin` name against
 `mixins.masucraftfixes.json`).
 Runtime behaviour is checked on the Skyvault U4 test network
 (`/mnt/data/AI/work/masucraftfixes-phaseR-2026-11-21/qa/` on 4.0.0, `/mnt/data/AI/work/masucraftfixes-r2a-2026-11-23/qa/`
-on 4.0.1: scripts, `testnet-results.md`).
+on 4.0.1: scripts, `testnet-results.md`). The off-thread disconnect is reproduced on the local VH-Remastered testnet with a
+test-only mod that throws from `ServerPlayer.tick` in a vault (`/mnt/data/AI/work/masucraftfixes-offthread-disconnect-2026-11-26/`:
+`qa-mod/`, `qa/testnet-results.md`). `src/test/resources/log4j2-test.xml` keeps test logging on the console (Forge's
+`log4j2.xml` would write `logs/` into the project folder).
 
 <!-- masuary-os-area --> Masuary OS area: [minecraft](/mnt/data/AI/os/areas/minecraft.md) (where this project sits in the map; update that line when this folder moves)

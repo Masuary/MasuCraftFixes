@@ -8,7 +8,7 @@ version="${file.jarVersion}"
 displayName="MasuCraft Fixes"
 authors="Masuary"
 description='''
-Server-side fixes for the MasuCraft Vault Hunters network: FTB /fly rules in vaults and with Angel flight, a LuckPerms player-limit bypass and command-block edit permission, rescue from dead vault worlds, crystal room pool suggestions, Orechid Ignem in Nether biomes, Pickarang item tag filtering, and Refined Storage without forced chunk loading.
+Server-side fixes for the MasuCraft Vault Hunters network: FTB /fly rules in vaults and with Angel flight, a LuckPerms player-limit bypass and command-block edit permission, rescue from dead vault worlds, crystal room pool suggestions, Orechid Ignem in Nether biomes, Pickarang item tag filtering, Refined Storage without forced chunk loading, and no server hang when a player is disconnected from a vault worker thread.
 '''
 
 [[dependencies.masucraftfixes]]

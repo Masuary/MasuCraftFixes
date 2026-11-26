@@ -14,6 +14,7 @@
     "PickarangMixin",
     "PlayerListMixin",
     "RecipeManagerMixin",
+    "ServerGamePacketListenerImplMixin",
     "refinedstorage.CraftingManagerMixin",
     "refinedstorage.NetworkListenerMixin",
     "refinedstorage.NetworkMixin",
