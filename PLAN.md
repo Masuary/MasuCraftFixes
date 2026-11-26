@@ -2,6 +2,12 @@
 
 ## In progress
 
+### Next: no server hang when a player is disconnected from a vault worker thread (sir, 2026-11-26)
+Found in the MAIN watchdog crash of 2026-11-26 14:29 (analysis: MasuCraft-CrossServer `PLAN.md` Phase 2.10.2; crash, logs and decompiled Neruina 2.1.2 / VH 7226 in `/mnt/data/AI/work/pds-vault-thread-grants-2026-11-26/`). VH ticks CONCURRENT vaults on worker threads while the server thread waits in `VirtualWorlds.tick`. Any exception in a player's tick inside a vault reaches Neruina 2.1.2's `TickHandler.handleTickingPlayer`, which calls `player.connection.disconnect(...)` on that worker; vanilla `ServerGamePacketListenerImpl.disconnect` ends with `server.executeBlocking(connection::handleDisconnection)`, so the worker joins a task the blocked server thread never runs, and the watchdog kills the server after 60 s. PDS 2.10.2 removed the trigger that crashed MAIN, but every other mod's player-tick exception in a vault still hangs a backend.
+- Sir's choice: fix it here (not Neruina's `handle_ticking_players=false`, which would crash instead of hang)
+- [ ] Mixin on `ServerGamePacketListenerImpl.disconnect`: when not on the server thread, send the packet and `setReadOnly` as vanilla does, then hand `handleDisconnection` to `server.execute` instead of `executeBlocking`; one WARN with the thread name; server-thread calls unchanged
+- [ ] Repro on the local VH-Remastered testnet (MAIN+VOID 4.0.1.1): a player-tick exception inside a vault (for example a test-only throw) hangs the base build and disconnects cleanly with the fix; then build, release and deploy like 1.9.2
+
 ### Known broken pack recipes stay quiet (2026-11-25, v1.9.2) - uploaded, loads at the next restart
 **Problem:** every Skyvault backend logged 105 "Parsing error loading recipe" stack traces per boot (about 3,300
 lines). All come from the VH Remastered 4.0.1 pack itself (the stock single-player pack logs the same 105): recipes
